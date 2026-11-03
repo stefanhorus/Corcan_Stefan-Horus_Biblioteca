@@ -1,0 +1,16 @@
+@model List<Recommendation>
+<h2>Recomandări pentru cititorul @ViewBag.UserId</h2>
+<form method="get" class="mb-3">
+    <input name="userId" type="number" value="@ViewBag.UserId" />
+    <button type="submit" class="btn btn-primary btn-sm">Arată</button>
+</form>
+@if (Model.Count == 0)
+{
+    <p>Nicio recomandare. De ce?</p>
+}
+<ol>
+@foreach (var r in Model)
+{
+    <li>@r.Title <small class="text-muted">(scor @r.Score.ToString("0.00"))</small></li>
+}
+</ol>
