@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -22,58 +21,34 @@ namespace Intalnirea1.Controllers
             _logger = logger;
         }
 
-        // GET: Books?v=A|B|C|D  (cele patru variante din fișă; implicit D)
-        public async Task<IActionResult> Index(string v = "D")
+        // GET: Books
+        public async Task<IActionResult> Index(string? sortOrder, string? searchString)
         {
-            var sw = Stopwatch.StartNew();
-            List<BookRow> rows;
+            ViewData["TitleSortParm"] = sortOrder == "title" ? "title_desc" : "title";
+            ViewData["PriceSortParm"] = sortOrder == "price" ? "price_desc" : "price";
+            ViewData["CurrentFilter"] = searchString;
 
-            switch (v.ToUpperInvariant())
+            var books = _context.Book.AsQueryable();
+            if (!string.IsNullOrEmpty(searchString))
+                books = books.Where(b => b.Title.Contains(searchString));
+
+            books = sortOrder switch
             {
-                case "A": // fără Include
-                {
-                    var books = await _context.Book.ToListAsync();
-                    rows = ToRows(books);
-                    break;
-                }
-                case "B": // eager loading
-                {
-                    var books = await _context.Book
-                        .Include(b => b.Author).Include(b => b.Orders)
-                        .ToListAsync();
-                    rows = ToRows(books);
-                    break;
-                }
-                case "C": // încărcare explicită în buclă
-                {
-                    var books = await _context.Book.ToListAsync();
-                    foreach (var b in books)
-                    {
-                        var e = _context.Entry(b);
-                        await e.Reference(x => x.Author).LoadAsync();
-                        await e.Collection(x => x.Orders).LoadAsync();
-                    }
-                    rows = ToRows(books);
-                    break;
-                }
-                default: // D · proiecție
-                    v = "D";
-                    rows = await _context.Book
-                        .Select(b => new BookRow(b.Title,
-                            b.Author!.FirstName + " " + b.Author.LastName,
-                            b.Orders.Count))
-                        .ToListAsync();
-                    break;
-            }
+                "title" => books.OrderBy(b => b.Title),
+                "title_desc" => books.OrderByDescending(b => b.Title),
+                "price" => books.OrderBy(b => b.Price),
+                "price_desc" => books.OrderByDescending(b => b.Price),
+                _ => books.OrderByDescending(b => b.Price) // [V2] B1: preț, descrescător
+            };
 
-            _logger.LogInformation("Index {Variant}: {Ms} ms", v, sw.ElapsedMilliseconds);
-            ViewData["Variant"] = v;
+            var rows = await books
+                .Select(b => new BookListItem(b.ID, b.Title,
+                    b.Author != null ? b.Author.FirstName + " " + b.Author.LastName : "",
+                    b.Genre != null ? b.Genre.Name : "",
+                    b.Price, b.Orders.Count))
+                .ToListAsync();
             return View(rows);
         }
-
-        private static List<BookRow> ToRows(List<Book> books) =>
-            books.Select(b => new BookRow(b.Title,
-                b.Author?.LastName ?? "(gol)", b.Orders.Count)).ToList();
 
         // GET: Books/Details/5
         public async Task<IActionResult> Details(int? id)
