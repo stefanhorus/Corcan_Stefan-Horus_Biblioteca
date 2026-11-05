@@ -72,30 +72,43 @@ Filtrul (`"b"."GenreID" = @genreId`), căutarea, sortarea și paginarea (`LIMIT`
 
 ## S4 · Folosirea AI
 
-* **Instrumente folosite:** [ ]
-* **La ce pași:** [ ]
+* **Instrumente folosite:** Claude (Claude Code, în aplicația desktop Claude), care a rulat comenzile `dotnet`, a modificat fișierele și a testat aplicația pornind-o local și trimițând cereri HTTP.
+* **La ce pași:** la toți pașii (A1–A5, S1–S3) și la completarea jurnalului. Fiecare pas a fost verificat în aplicație (pagini, formulare) și comparat cu interogări SQL directe în baza de date înainte de commit.
 * **Un exemplu de cerere trimisă:**
 
-> [ ]
+> fa tot ce scrie acolo ca e de facut — 121200055, Corcan Stefan-Horus (împreună cu PDF-ul laboratorului și șablonul JURNAL.md)
 
 * **O situație în care am corectat sau respins un răspuns AI:**
 
-  * Ce a propus AI-ul / care era eroarea: [ ]
-  * Cum mi-am dat seama că e greșit sau ineficient: [ ]
+  * Ce a propus AI-ul / care era eroarea: la Î1, catalogul generat prin scaffolding salva prețurile greșit: cărțile trimise cu prețurile `49.00` și `52.00` apăreau în listă ca `4900,00` și `5200,00`. Codul generat nu seta nicio cultură, iar Mac-ul are setările regionale în română, unde virgula e separatorul zecimal și punctul e separator de mii, așa că model binding-ul citea „49.00” ca 4900.
+  * Cum mi-am dat seama că e greșit sau ineficient: testul de adăugare/editare (3 cărți create, una editată) a afișat în Index prețuri de ~100 de ori mai mari decât cele introduse. Codul compila și pagina se încărca fără erori, deci problema se vedea doar comparând valorile salvate cu cele trimise.
   * Codul inițial:
 
 ```csharp
-[ ]
+app.UseHttpsRedirection();
+app.UseRouting();
 ```
 
 * Codul final:
 
 ```csharp
-[ ]
+app.UseHttpsRedirection();
+
+// Prețurile folosesc punctul zecimal (45.50), indiferent de setările regionale ale sistemului.
+app.UseRequestLocalization("en-US");
+
+app.UseRouting();
 ```
+
+După fix, aceleași cereri au salvat `49.00` și `52.00`. Am refăcut baza de date ca să nu rămână prețuri greșite.
+
+* **Alte corecturi făcute în timpul laboratorului:**
+  * La A1, AI-ul a creat un fișier `Biblioteca.slnx` în același folder cu `Intalnirea1.csproj`. Cu două fișiere de proiect/soluție în același folder, `dotnet build` fără argumente dă eroarea `MSB1011: Specify which project or solution file to use`. Am renunțat la `.slnx`; jurnalul stă în rădăcina repository-ului, lângă `.csproj`.
+  * La S1, `Create` din controller-ul generat pentru `Order` nu salva nimic (răspuns 200, fără mesaj de eroare), din cauza validării implicite pe proprietățile de navigare non-nullable `Customer` și `Book`. Rezolvat cu `[ValidateNever]` (detalii la S1).
+  * La S3, sortarea dată în ghid (doar după preț, la varianta mea) nu era stabilă pentru cărțile cu același preț, ceea ce putea muta cărți între pagini. Am adăugat `ThenBy(b => b.ID)`.
 
 ---
 
 ## Ce nu am reușit (opțional)
 
-[ ]
+* Proiectul folosește **SQLite** în loc de SQL Server, pentru că SQL Server nu rulează nativ pe macOS. Codul EF Core e același; diferă doar SQL-ul generat (de ex. `ef_avg` în loc de `AVG`, `instr` în loc de `LIKE`/`CHARINDEX`, `LIMIT/OFFSET` în loc de `OFFSET … FETCH`).
