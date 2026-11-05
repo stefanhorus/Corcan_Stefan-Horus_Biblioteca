@@ -35,12 +35,40 @@ Proiectul folosește SQLite, unde EF Core calculează media pentru `decimal` cu 
 
 ## S3 · Filtrul variantei mele (V3)
 
-* Filtrul implementat: **[ ]**
-* Interogarea, cu filtrul aplicat:
+* Filtrul implementat: **gen (listă cu opțiunea „Toate”)**, parametrul `genreId` în `BooksController.Index`. Se combină cu căutarea după titlu și cu sortarea; link-urile de sortare (Titlu, Autor, Preț) și butoanele Înapoi/Înainte trimit toate `currentFilter`, `genreId` și `sortOrder`, iar formularul păstrează sortarea curentă printr-un câmp ascuns.
+* Interogarea, cu filtrul aplicat (din log, pentru căutare „a” + gen „Roman românesc” + sortare după titlu, pagina 1):
 
 ```sql
-[ ]
+SELECT COUNT(*)
+FROM "Book" AS "b"
+WHERE instr("b"."Title", @searchString) > 0 AND "b"."GenreID" = @genreId
+
+SELECT "b0"."ID", "b0"."Title", CASE
+    WHEN "a"."ID" IS NOT NULL THEN COALESCE("a"."FirstName", '') || ' ' || COALESCE("a"."LastName", '')
+    ELSE ''
+END, CASE
+    WHEN "g"."ID" IS NOT NULL THEN "g"."Name"
+    ELSE ''
+END, "b0"."Price", (
+    SELECT COUNT(*)
+    FROM "Order" AS "o"
+    WHERE "b0"."ID" = "o"."BookID")
+FROM (
+    SELECT "b"."ID", "b"."AuthorID", "b"."GenreID", "b"."Price", "b"."Title"
+    FROM "Book" AS "b"
+    WHERE instr("b"."Title", @searchString) > 0 AND "b"."GenreID" = @genreId
+    ORDER BY "b"."Title", "b"."ID"
+    LIMIT @p3 OFFSET @p
+) AS "b0"
+LEFT JOIN "Author" AS "a" ON "b0"."AuthorID" = "a"."ID"
+LEFT JOIN "Genre" AS "g" ON "b0"."GenreID" = "g"."ID"
+ORDER BY "b0"."Title", "b0"."ID"
 ```
+
+Filtrul (`"b"."GenreID" = @genreId`), căutarea, sortarea și paginarea (`LIMIT`/`OFFSET`) sunt toate în SQL; în memorie ajung doar cele 4 rânduri ale paginii.
+
+* Scenariul meu de test (cel puțin 2 pagini): gen **Roman românesc**, căutare **„a”**, sortare **Titlu A → Z**. Rezultă **7 cărți pe 2 pagini** (4 pe pagină, varianta A0): pagina 1 — Baltagul, Craii de Curtea-Veche, Enigma Otiliei, Maitreyi; pagina 2 — Mara, Pădurea spânzuraților, Ultima noapte de dragoste, întâia noapte de război. Am verificat direct în baza de date: `select count(*) from Book where GenreID = 8 and instr(Title, 'a') > 0` = 7. Pe pagina 2, butonul Înapoi duce la `?sortOrder=title&pageNumber=1&currentFilter=a&genreId=8`, iar un click pe „Titlu” trece la Z → A păstrând filtrul și căutarea (pagina 1 începe cu „Ultima noapte…”). Fără căutare, genul Roman românesc are 9 cărți, pe 3 pagini.
+* Am adăugat `ThenBy(b => b.ID)` după orice sortare: sortarea implicită este după preț și mai multe cărți au același preț (de ex. 39,00). La valori egale, ordinea din SQL nu e garantată, deci aceeași carte putea apărea pe două pagini, iar alta pe niciuna.
 
 ## S4 · Folosirea AI
 

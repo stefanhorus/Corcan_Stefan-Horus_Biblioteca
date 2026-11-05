@@ -23,7 +23,7 @@ namespace Intalnirea1.Controllers
 
         // GET: Books
         public async Task<IActionResult> Index(string? sortOrder, string? currentFilter,
-            string? searchString, int? pageNumber)
+            string? searchString, int? genreId, int? pageNumber)
         {
             ViewData["CurrentSort"] = sortOrder;
             ViewData["TitleSortParm"] = sortOrder == "title" ? "title_desc" : "title";
@@ -34,11 +34,18 @@ namespace Intalnirea1.Controllers
             else searchString = currentFilter;
             ViewData["CurrentFilter"] = searchString;
 
+            // [V3] A0: filtru după gen (listă cu „Toate”)
+            ViewData["CurrentGenre"] = genreId;
+            ViewData["GenreFilter"] = new SelectList(
+                await _context.Genre.OrderBy(g => g.Name).ToListAsync(), "ID", "Name", genreId);
+
             var books = _context.Book.AsQueryable();
             if (!string.IsNullOrEmpty(searchString))
                 books = books.Where(b => b.Title.Contains(searchString));
+            if (genreId != null)
+                books = books.Where(b => b.GenreID == genreId);
 
-            books = sortOrder switch
+            IOrderedQueryable<Book> sorted = sortOrder switch
             {
                 "title" => books.OrderBy(b => b.Title),
                 "title_desc" => books.OrderByDescending(b => b.Title),
@@ -50,6 +57,9 @@ namespace Intalnirea1.Controllers
                 "author_desc" => books.OrderByDescending(b => b.Author!.FirstName + " " + b.Author.LastName),
                 _ => books.OrderByDescending(b => b.Price) // [V2] B1: preț, descrescător
             };
+            // La valori egale (ex. mai multe cărți cu același preț) ordinea din SQL nu e garantată,
+            // iar paginarea ar putea repeta sau sări cărți între pagini; ID-ul face ordinea stabilă.
+            books = sorted.ThenBy(b => b.ID);
 
             var rows = books
                 .Select(b => new BookListItem(b.ID, b.Title,
