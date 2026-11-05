@@ -98,8 +98,8 @@ namespace Intalnirea1.Controllers
         // GET: Books/Create
         public IActionResult Create()
         {
-            ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "ID");
-            ViewData["AuthorID"] = new SelectList(_context.Set<Author>(), "ID", "FullName");
+            ViewData["GenreID"] = new SelectList(_context.Genre.OrderBy(g => g.Name), "ID", "Name");
+            ViewData["AuthorID"] = new SelectList(_context.Author.OrderBy(a => a.LastName), "ID", "FullName");
             return View();
         }
 
@@ -116,8 +116,8 @@ namespace Intalnirea1.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "ID", book.GenreID);
-            ViewData["AuthorID"] = new SelectList(_context.Set<Author>(), "ID", "FullName", book.AuthorID);
+            ViewData["GenreID"] = new SelectList(_context.Genre.OrderBy(g => g.Name), "ID", "Name", book.GenreID);
+            ViewData["AuthorID"] = new SelectList(_context.Author.OrderBy(a => a.LastName), "ID", "FullName", book.AuthorID);
             return View(book);
         }
 
@@ -134,8 +134,8 @@ namespace Intalnirea1.Controllers
             {
                 return NotFound();
             }
-            ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "ID", book.GenreID);
-            ViewData["AuthorID"] = new SelectList(_context.Set<Author>(), "ID", "FullName", book.AuthorID);
+            ViewData["GenreID"] = new SelectList(_context.Genre.OrderBy(g => g.Name), "ID", "Name", book.GenreID);
+            ViewData["AuthorID"] = new SelectList(_context.Author.OrderBy(a => a.LastName), "ID", "FullName", book.AuthorID);
             return View(new BookEditViewModel
             {
                 ID = book.ID, Title = book.Title, Price = book.Price,
@@ -151,8 +151,8 @@ namespace Intalnirea1.Controllers
             if (id != vm.ID) return NotFound();
             if (!ModelState.IsValid)
             {
-                ViewData["GenreID"] = new SelectList(_context.Set<Genre>(), "ID", "ID", vm.GenreID);
-                ViewData["AuthorID"] = new SelectList(_context.Set<Author>(), "ID", "FullName", vm.AuthorID);
+                ViewData["GenreID"] = new SelectList(_context.Genre.OrderBy(g => g.Name), "ID", "Name", vm.GenreID);
+                ViewData["AuthorID"] = new SelectList(_context.Author.OrderBy(a => a.LastName), "ID", "FullName", vm.AuthorID);
                 return View(vm);
             }
             var book = await _context.Book.FindAsync(id);
