@@ -22,10 +22,15 @@ namespace Intalnirea1.Controllers
         }
 
         // GET: Books
-        public async Task<IActionResult> Index(string? sortOrder, string? searchString)
+        public async Task<IActionResult> Index(string? sortOrder, string? currentFilter,
+            string? searchString, int? pageNumber)
         {
+            ViewData["CurrentSort"] = sortOrder;
             ViewData["TitleSortParm"] = sortOrder == "title" ? "title_desc" : "title";
             ViewData["PriceSortParm"] = sortOrder == "price" ? "price_desc" : "price";
+
+            if (searchString != null) pageNumber = 1;
+            else searchString = currentFilter;
             ViewData["CurrentFilter"] = searchString;
 
             var books = _context.Book.AsQueryable();
@@ -41,13 +46,14 @@ namespace Intalnirea1.Controllers
                 _ => books.OrderByDescending(b => b.Price) // [V2] B1: preț, descrescător
             };
 
-            var rows = await books
+            var rows = books
                 .Select(b => new BookListItem(b.ID, b.Title,
                     b.Author != null ? b.Author.FirstName + " " + b.Author.LastName : "",
                     b.Genre != null ? b.Genre.Name : "",
-                    b.Price, b.Orders.Count))
-                .ToListAsync();
-            return View(rows);
+                    b.Price, b.Orders.Count));
+
+            const int pageSize = 4; // [V1] A0: 4 cărți pe pagină
+            return View(await PaginatedList<BookListItem>.CreateAsync(rows, pageNumber ?? 1, pageSize));
         }
 
         // GET: Books/Details/5
