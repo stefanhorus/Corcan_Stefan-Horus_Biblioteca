@@ -11,8 +11,10 @@
 
 ## S1 · Comenzile
 
-* Protecția la overposting aleasă: **[ ]**
-* De ce am ales-o: [ ]
+* Protecția la overposting aleasă: **TryUpdateModelAsync**
+* De ce am ales-o: leagă din formular doar câmpurile enumerate explicit (`CustomerID`, `BookID`, `OrderDate`), iar la Edit comanda se citește întâi din baza de date și se modifică doar acele câmpuri, deci nu se pierd coloane care nu sunt în formular (problema pe care `[Bind]` + `_context.Update` o are, văzută la Î2). Spre deosebire de un ViewModel, nu cere o clasă nouă și o mapare pentru un formular cu doar trei câmpuri. Verificat: un POST cu `OrderID=9999` în plus a creat comanda cu ID-ul generat de baza de date, iar 9999 nu există.
+* Problemă găsită: `Create` generat prin scaffolding nu salva nimic (răspuns 200, fără mesaj de eroare). `Order.Customer` și `Order.Book` sunt de tip non-nullable, deci validarea MVC le consideră obligatorii, dar formularul trimite doar ID-urile. Am adăugat `[ValidateNever]` pe cele două proprietăți de navigare.
+* Comenzi adăugate din interfață: Cititor 3 → *Domain-Driven Design* (2026-11-05) și Cititor 7 → *Clean Code* (data modificată apoi din Edit în 2026-11-01).
 
 ## S2 · Pagina unui autor și sortarea după autor
 
