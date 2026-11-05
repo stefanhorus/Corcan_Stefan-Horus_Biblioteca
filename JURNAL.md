@@ -20,12 +20,18 @@
 
 * Indicatorul V4 (prețul mediu al cărților autorului) este calculat cu interogarea:
 
+Cod: `await _context.Book.Where(b => b.AuthorID == id).AverageAsync(b => (decimal?)b.Price)`, în `AuthorsController.Details`. SQL generat (din log):
+
 ```sql
-[ ]
+SELECT ef_avg("b"."Price")
+FROM "Book" AS "b"
+WHERE "b"."AuthorID" = @id
 ```
 
-* De ce `OrderBy(b => b.Author.FullName)` aruncă o excepție? [ ]
-* Cum am rezolvat: [ ]
+Proiectul folosește SQLite, unde EF Core calculează media pentru `decimal` cu funcția proprie `ef_avg` (SQLite nu are tip decimal nativ); pe SQL Server aceeași interogare devine `SELECT AVG([b].[Price]) ...`. Verificare pentru Liviu Rebreanu: pagina arată 40,50, iar `select avg(Price) from Book where AuthorID = 4` direct în baza de date dă tot 40,5. Totalul de comenzi (14) e tot o interogare SQL: `SELECT COUNT(*) FROM "Order" AS "o" INNER JOIN "Book" AS "b" ON "o"."BookID" = "b"."ID" WHERE "b"."AuthorID" = @id`.
+
+* De ce `OrderBy(b => b.Author.FullName)` aruncă o excepție? `FullName` este o proprietate calculată în C# (`=> $"{FirstName} {LastName}"`), fără setter, deci nu e mapată la nicio coloană. EF Core trebuie să traducă tot `OrderBy` în SQL, iar pentru `FullName` nu are ce coloană să folosească. Excepția obținută: `InvalidOperationException: ... .OrderBy(b => b.Inner.FullName)' could not be translated. Additional information: Translation of member 'FullName' on entity type 'Author' failed. This commonly occurs when the specified member is unmapped.`
+* Cum am rezolvat: sortez după expresia din care e calculat `FullName`, scrisă cu coloane mapate: `books.OrderBy(b => b.Author!.FirstName + " " + b.Author.LastName)`. EF o traduce în `ORDER BY COALESCE("a"."FirstName", '') || ' ' || COALESCE("a"."LastName", '')` (din log), deci sortarea rămâne în SQL. Nu am folosit `AsEnumerable()`/`ToList()` înainte de sortare, pentru că asta ar aduce toate cărțile în memorie și ar strica paginarea făcută în baza de date.
 
 ## S3 · Filtrul variantei mele (V3)
 

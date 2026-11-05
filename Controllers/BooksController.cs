@@ -28,6 +28,7 @@ namespace Intalnirea1.Controllers
             ViewData["CurrentSort"] = sortOrder;
             ViewData["TitleSortParm"] = sortOrder == "title" ? "title_desc" : "title";
             ViewData["PriceSortParm"] = sortOrder == "price" ? "price_desc" : "price";
+            ViewData["AuthorSortParm"] = sortOrder == "author" ? "author_desc" : "author";
 
             if (searchString != null) pageNumber = 1;
             else searchString = currentFilter;
@@ -43,6 +44,10 @@ namespace Intalnirea1.Controllers
                 "title_desc" => books.OrderByDescending(b => b.Title),
                 "price" => books.OrderBy(b => b.Price),
                 "price_desc" => books.OrderByDescending(b => b.Price),
+                // FullName nu e mapat la o coloană, deci EF nu-l poate traduce în SQL;
+                // sortăm după aceeași expresie din care e calculat.
+                "author" => books.OrderBy(b => b.Author!.FirstName + " " + b.Author.LastName),
+                "author_desc" => books.OrderByDescending(b => b.Author!.FirstName + " " + b.Author.LastName),
                 _ => books.OrderByDescending(b => b.Price) // [V2] B1: preț, descrescător
             };
 

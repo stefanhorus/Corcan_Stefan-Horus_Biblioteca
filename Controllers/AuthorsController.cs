@@ -33,14 +33,27 @@ namespace Intalnirea1.Controllers
                 return NotFound();
             }
 
-            var author = await _context.Author
+            var author = await _context.Author.AsNoTracking()
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (author == null)
             {
                 return NotFound();
             }
 
-            return View(author);
+            var authorBooks = _context.Book.Where(b => b.AuthorID == id);
+
+            var books = await authorBooks
+                .OrderBy(b => b.Title)
+                .Select(b => new AuthorBookRow(b.ID, b.Title,
+                    b.Genre != null ? b.Genre.Name : "", b.Price, b.Orders.Count))
+                .ToListAsync();
+
+            var totalOrders = await _context.Order.CountAsync(o => o.Book.AuthorID == id);
+
+            // [V4] B1: prețul mediu al cărților autorului, calculat în SQL (AVG)
+            var averagePrice = await authorBooks.AverageAsync(b => (decimal?)b.Price);
+
+            return View(new AuthorDetailsViewModel(author, books, totalOrders, averagePrice));
         }
 
         // GET: Authors/Create
