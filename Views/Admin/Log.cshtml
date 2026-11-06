@@ -1,0 +1,57 @@
+@model PaginatedList<RecommendationLog>
+@{ ViewData["Title"] = "Jurnalul recomandărilor"; }
+
+<h1>Jurnalul recomandărilor</h1>
+<p><a asp-action="Index">Înapoi la Administrare</a></p>
+
+<form asp-action="Log" method="get" class="mb-3">
+    <input type="hidden" name="sortOrder" value="@ViewData["CurrentSort"]" />
+    Cititor: <input type="number" name="readerId" value="@ViewData["ReaderId"]" style="width: 6em" />
+    De la: <input type="date" name="from" value="@ViewData["From"]" />
+    Până la: <input type="date" name="to" value="@ViewData["To"]" />
+    <button type="submit" class="btn btn-primary btn-sm">Filtrează</button>
+    <a asp-action="Log">Toate</a>
+</form>
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th><a asp-action="Log" asp-route-sortOrder="@ViewData["DateSortParm"]"
+                   asp-route-readerId="@ViewData["ReaderId"]"
+                   asp-route-from="@ViewData["From"]"
+                   asp-route-to="@ViewData["To"]">Data (UTC)</a></th>
+            <th>Cititor</th>
+            <th>Cărți întoarse (ID)</th>
+            <th>Cold start</th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var l in Model)
+{
+        <tr>
+            <td>@l.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+            <td>@l.ReaderId</td>
+            <td>@l.BookIds</td>
+            <td>@(l.Fallback ? "da" : "nu")</td>
+        </tr>
+}
+    </tbody>
+</table>
+
+@{
+    var prevDisabled = Model.HasPreviousPage ? "" : "disabled";
+    var nextDisabled = Model.HasNextPage ? "" : "disabled";
+}
+<a asp-action="Log" asp-route-sortOrder="@ViewData["CurrentSort"]"
+   asp-route-pageNumber="@(Model.PageIndex - 1)"
+   asp-route-readerId="@ViewData["ReaderId"]"
+   asp-route-from="@ViewData["From"]"
+   asp-route-to="@ViewData["To"]"
+   class="btn btn-outline-primary @prevDisabled">Înapoi</a>
+<a asp-action="Log" asp-route-sortOrder="@ViewData["CurrentSort"]"
+   asp-route-pageNumber="@(Model.PageIndex + 1)"
+   asp-route-readerId="@ViewData["ReaderId"]"
+   asp-route-from="@ViewData["From"]"
+   asp-route-to="@ViewData["To"]"
+   class="btn btn-outline-primary @nextDisabled">Înainte</a>
+<span class="ms-2">Pagina @Model.PageIndex din @Model.TotalPages</span>

@@ -190,6 +190,30 @@ namespace Intalnirea1.Migrations
                     b.ToTable("Rating");
                 });
 
+            modelBuilder.Entity("Intalnirea1.Models.RecommendationLog", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BookIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Fallback")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ReaderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ID");
+
+                    b.ToTable("RecommendationLog");
+                });
+
             modelBuilder.Entity("BookPublisher", b =>
                 {
                     b.HasOne("Intalnirea1.Models.Book", null)

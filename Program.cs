@@ -97,6 +97,16 @@ app.MapGet("/api/v2/readers/{id:int}/recommendations",
                 p.BookID, titles[p.BookID], (float)p.Avg, true)).ToList();
         }
 
+        // [S1] jurnalul recomandărilor: fiecare apel se salvează
+        db.RecommendationLog.Add(new RecommendationLog
+        {
+            ReaderId = id,
+            CreatedAt = DateTime.UtcNow,
+            BookIds = string.Join(",", recs.Select(r => r.BookId)),
+            Fallback = recs.Any(r => r.Fallback)
+        });
+        await db.SaveChangesAsync();
+
         return TypedResults.Ok(recs);
     })
     .WithTags("Recomandări");

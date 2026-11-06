@@ -1,6 +1,7 @@
 @{ ViewData["Title"] = "Administrare"; }
 
 <h1>Administrare</h1>
+<p><a asp-action="Log">Jurnalul recomandărilor</a></p>
 @if (TempData["Msg"] is string msg) { <div class="alert alert-info">@msg</div> }
 <p>Evaluări în baza de date: <strong>@ViewBag.Ratings</strong></p>
 

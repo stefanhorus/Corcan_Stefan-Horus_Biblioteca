@@ -14,6 +14,32 @@ public class AdminController(LibraryContext db, RecommenderTrainer trainer) : Co
         return View();
     }
 
+    // GET: Admin/Log?readerId=5&from=2026-11-01&to=2026-11-06&sortOrder=date&pageNumber=2
+    public async Task<IActionResult> Log(int? readerId, DateTime? from, DateTime? to,
+        string? sortOrder, int? pageNumber)
+    {
+        ViewData["ReaderId"] = readerId;
+        ViewData["From"] = from?.ToString("yyyy-MM-dd");
+        ViewData["To"] = to?.ToString("yyyy-MM-dd");
+        ViewData["CurrentSort"] = sortOrder;
+        ViewData["DateSortParm"] = sortOrder == "date" ? "" : "date";   // implicit: cele mai noi primele
+
+        var logs = db.RecommendationLog.AsNoTracking();
+        if (readerId != null)
+            logs = logs.Where(l => l.ReaderId == readerId);
+        if (from != null)
+            logs = logs.Where(l => l.CreatedAt >= from.Value.Date);
+        if (to != null)
+            logs = logs.Where(l => l.CreatedAt < to.Value.Date.AddDays(1));   // „până la” include toată ziua
+
+        logs = sortOrder == "date"
+            ? logs.OrderBy(l => l.CreatedAt).ThenBy(l => l.ID)
+            : logs.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.ID);
+
+        const int pageSize = 10;
+        return View(await PaginatedList<RecommendationLog>.CreateAsync(logs, pageNumber ?? 1, pageSize));
+    }
+
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ImportRatings(IFormFile? file)
     {
