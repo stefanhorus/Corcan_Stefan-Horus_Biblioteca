@@ -14,6 +14,38 @@ public class AdminController(LibraryContext db, RecommenderTrainer trainer) : Co
         return View();
     }
 
+    // GET: Admin/Dashboard — toate agregările se calculează în SQL
+    public async Task<IActionResult> Dashboard()
+    {
+        var ratings = await db.Rating.CountAsync();
+        var readers = await db.Rating.Select(r => r.ReaderId).Distinct().CountAsync();
+        var average = ratings > 0 ? await db.Rating.AverageAsync(r => r.Stars) : 0;
+
+        var counts = await db.Rating
+            .GroupBy(r => r.Stars)
+            .Select(g => new StarCount(g.Key, g.Count()))
+            .ToListAsync();
+        // toate cele 5 bare, și pentru notele care nu apar deloc
+        var distribution = Enumerable.Range(1, 5)
+            .Select(s => counts.FirstOrDefault(c => c.Stars == s) ?? new StarCount(s, 0))
+            .ToList();
+
+        // [S2] B1: media evaluărilor pe autor
+        // Sortarea se face pe agregat (g.Average), nu pe proprietatea record-ului:
+        // EF nu poate traduce în SQL un OrderBy pe un obiect construit cu new AuthorAverage(...).
+        var byAuthor = (await db.Rating
+                .Where(r => r.Book.AuthorID != null)
+                .GroupBy(r => new { r.Book.Author!.ID, r.Book.Author.FirstName, r.Book.Author.LastName })
+                .OrderByDescending(g => g.Average(r => r.Stars))
+                .Select(g => new { g.Key.FirstName, g.Key.LastName,
+                    Average = g.Average(r => r.Stars), Count = g.Count() })
+                .ToListAsync())
+            .Select(a => new AuthorAverage(a.FirstName + " " + a.LastName, a.Average, a.Count))
+            .ToList();
+
+        return View(new DashboardViewModel(ratings, readers, average, distribution, byAuthor));
+    }
+
     // GET: Admin/Log?readerId=5&from=2026-11-01&to=2026-11-06&sortOrder=date&pageNumber=2
     public async Task<IActionResult> Log(int? readerId, DateTime? from, DateTime? to,
         string? sortOrder, int? pageNumber)

@@ -161,3 +161,59 @@ Proiectul consolă este în `Biblioteca.ML.GenreTraining/` (exclus din compilare
 * Entitatea `RecommendationLog` (`ReaderId`, `CreatedAt` în UTC, `BookIds` — ID-urile cărților întoarse, în ordine, separate prin virgulă — și `Fallback`, adică dacă s-a aplicat cold start), migrarea `RecommendationLogs`. Endpoint-ul `/api/v2/readers/{id}/recommendations` salvează o înregistrare la fiecare apel, după ce calculează lista.
 * Pagina **Admin/Log** (link din Administrare): tabel paginat cu `PaginatedList` din Î4 (10 pe pagină), filtru după cititor și interval de date (De la / Până la, ziua „până la” inclusă), sortare după dată (implicit cele mai noi primele; click pe „Data” inversează). Filtrarea, sortarea și paginarea sunt în SQL, iar link-urile de sortare și de paginare păstrează toți parametrii.
 * Test: 18 apeluri API (cititorii 5, 7, 12, 42 și 999) → 18 înregistrări, 2 pagini; cititorul 999 apare cu cold start „da”. Pentru filtrul pe interval am adăugat temporar 3 înregistrări cu date din 1–3 noiembrie direct în baza de date: filtrul cititor 5 + 1–3 noiembrie a întors exact cele 2 înregistrări așteptate (verificat cu `SELECT COUNT(*)`), apoi le-am șters.
+
+## S2 · Dashboard
+
+Pagina **Admin/Dashboard** (link din Administrare), cu Chart.js 4.4.1 încărcat de pe cdnjs. Toate valorile sunt calculate în SQL (`COUNT`, `COUNT(DISTINCT)`, `AVG`, `GROUP BY`) și le-am verificat cu interogări directe în baza de date.
+
+* Carduri: **6599** evaluări · **300** cititori distincți · media generală **3,25**.
+* Distribuția notelor (grafic cu bare): 1★ 365 · 2★ 1179 · 3★ 2361 · 4★ 1854 · 5★ 840.
+* Al doilea grafic, varianta **B1 — media evaluărilor pe autor** (bare orizontale, ordonate descrescător; tooltip-ul arată și numărul de evaluări): 36 de autori — Ana Exemplu nu are nicio evaluare, deci nu apare. Primii: Arthur Conan Doyle 4,14 (179 evaluări), Eric Evans 3,81, Stieg Larsson 3,81; ultimul: Robert C. Martin 2,26 (178 evaluări). Interogarea:
+
+```sql
+SELECT "a"."FirstName", "a"."LastName", AVG(CAST("r"."Stars" AS REAL)) AS "Average", COUNT(*) AS "Count"
+FROM "Rating" AS "r"
+INNER JOIN "Book" AS "b" ON "r"."BookID" = "b"."ID"
+LEFT JOIN "Author" AS "a" ON "b"."AuthorID" = "a"."ID"
+WHERE "b"."AuthorID" IS NOT NULL
+GROUP BY "a"."ID", "a"."FirstName", "a"."LastName"
+ORDER BY AVG(CAST("r"."Stars" AS REAL)) DESC
+```
+
+## Folosirea AI (Î5)
+
+* **Instrument:** Claude (Claude Code, aplicația desktop Claude), la toți pașii; fiecare pas verificat în aplicație și cu SQL direct.
+* **Exemplu de cerere:** „hai sa facem noua tema” (împreună cu PDF-ul laboratorului și, apoi, conținutul `book-descriptions.csv`).
+* **Un răspuns AI greșit:** la S2, prima variantă a interogării pentru media pe autor construia un `record` și apoi sorta după proprietatea lui:
+
+```csharp
+var byAuthor = await db.Rating
+    .Where(r => r.Book.Author != null)
+    .GroupBy(r => new { r.Book.Author!.FirstName, r.Book.Author.LastName })
+    .Select(g => new AuthorAverage(g.Key.FirstName + " " + g.Key.LastName,
+        g.Average(r => r.Stars), g.Count()))
+    .OrderByDescending(a => a.Average)
+    .ToListAsync();
+```
+
+  Codul compila, dar pagina dădea eroarea 500: `InvalidOperationException: ... .OrderByDescending(e0 => e0.Average)' could not be translated`. EF nu poate traduce în SQL un `OrderBy` pe proprietatea unui obiect creat cu constructorul unui record. Varianta finală sortează pe agregat, înainte de proiecție, deci sortarea rămâne în SQL (`ORDER BY AVG(...) DESC`), iar record-ul se construiește după `ToListAsync`:
+
+```csharp
+var byAuthor = (await db.Rating
+        .Where(r => r.Book.AuthorID != null)
+        .GroupBy(r => new { r.Book.Author!.ID, r.Book.Author.FirstName, r.Book.Author.LastName })
+        .OrderByDescending(g => g.Average(r => r.Stars))
+        .Select(g => new { g.Key.FirstName, g.Key.LastName,
+            Average = g.Average(r => r.Stars), Count = g.Count() })
+        .ToListAsync())
+    .Select(a => new AuthorAverage(a.FirstName + " " + a.LastName, a.Average, a.Count))
+    .ToList();
+```
+
+  Am grupat și după `Author.ID`, ca doi autori cu același nume să nu fie amestecați.
+
+## Abateri de la cerințe (Î5)
+
+* SQLite în loc de SQL Server (ca la Î4); SQL-ul din jurnal este cel generat pentru SQLite.
+* Nu aveam grupul `/api/v2/books` și fișierul `.http` de la Î3: endpoint-ul de recomandări e direct în `Program.cs`, iar `Intalnirea1.http` e nou.
+* Proiectul consolă pentru clasificarea genului este în subfolderul `Biblioteca.ML.GenreTraining/`, exclus din compilarea aplicației MVC; nu există un fișier de soluție, pentru că un `.slnx` în același folder cu `Intalnirea1.csproj` ar face ca `dotnet build` fără argumente să eșueze (MSB1011).

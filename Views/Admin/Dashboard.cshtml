@@ -1,0 +1,77 @@
+@model DashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+
+<h1>Dashboard</h1>
+<p><a asp-action="Index">Înapoi la Administrare</a></p>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Evaluări</div>
+            <div class="fs-3 fw-semibold">@Model.Ratings</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Cititori distincți</div>
+            <div class="fs-3 fw-semibold">@Model.Readers</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Media generală</div>
+            <div class="fs-3 fw-semibold">@Model.Average.ToString("0.00") ★</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <h5>Distribuția notelor</h5>
+        <canvas id="starsChart" height="260"></canvas>
+    </div>
+    <div class="col-lg-7">
+        <h5>Media evaluărilor pe autor</h5>
+        <div style="height: @(Math.Max(300, Model.ByAuthor.Count * 22))px">
+            <canvas id="authorChart"></canvas>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        const distribution = @Json.Serialize(Model.Distribution);
+        const byAuthor = @Json.Serialize(Model.ByAuthor);
+
+        new Chart(document.getElementById("starsChart"), {
+            type: "bar",
+            data: {
+                labels: distribution.map(d => d.stars + " ★"),
+                datasets: [{ label: "Număr de evaluări", data: distribution.map(d => d.count),
+                             backgroundColor: "#0d6efd" }]
+            },
+            options: { plugins: { legend: { display: false } },
+                       scales: { y: { beginAtZero: true, title: { display: true, text: "evaluări" } } } }
+        });
+
+        new Chart(document.getElementById("authorChart"), {
+            type: "bar",
+            data: {
+                labels: byAuthor.map(a => a.author),
+                datasets: [{ label: "Media notelor", data: byAuthor.map(a => a.average),
+                             backgroundColor: "#198754" }]
+            },
+            options: {
+                indexAxis: "y",
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: c =>
+                        c.parsed.x.toFixed(2) + " ★ (" + byAuthor[c.dataIndex].count + " evaluări)" } }
+                },
+                scales: { x: { min: 1, max: 5, title: { display: true, text: "media (1–5 stele)" } } }
+            }
+        });
+    </script>
+}
