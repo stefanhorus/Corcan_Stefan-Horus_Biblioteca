@@ -1,0 +1,7 @@
+@host = http://localhost:5127
+
+GET {{host}}/api/v2/readers/5/recommendations
+###
+GET {{host}}/api/v2/readers/5/recommendations?top=3
+###
+GET {{host}}/api/v2/readers/999/recommendations
