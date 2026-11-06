@@ -112,3 +112,17 @@ După fix, aceleași cereri au salvat `49.00` și `52.00`. Am refăcut baza de d
 ## Ce nu am reușit (opțional)
 
 * Proiectul folosește **SQLite** în loc de SQL Server, pentru că SQL Server nu rulează nativ pe macOS. Codul EF Core e același; diferă doar SQL-ul generat (de ex. `ef_avg` în loc de `AVG`, `instr` în loc de `LIKE`/`CHARINDEX`, `LIMIT/OFFSET` în loc de `OFFSET … FETCH`).
+
+---
+
+# Laboratorul Î5 · Corcan Stefan-Horus · nr. matricol 121200055 · varianta A0 · B1
+
+|Parametru|Valoarea mea|
+|-|-|
+|A3 · pragul pentru cold start (A0)|5 evaluări|
+|S2 · al doilea grafic (B1)|media evaluărilor pe autor|
+
+## A1 · Evaluările în baza de date
+
+* Am importat `book-ratings.csv` din pagina Administrare: **6599 de evaluări** importate (300 de cititori distincți, media 3,25). Numărul se potrivește cu rândurile de date din fișier (fără antet).
+* Observație: importul nu verifică duplicatele, deci o a doua încărcare a aceluiași fișier ar dubla evaluările.
