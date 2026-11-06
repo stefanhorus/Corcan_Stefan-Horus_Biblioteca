@@ -25,6 +25,16 @@
     <None Update="MLModels\BookRecommender.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="MLModels\GenreClassifier.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Proiectul consolă pentru antrenarea clasificatorului de gen are propriul .csproj -->
+  <ItemGroup>
+    <Compile Remove="Biblioteca.ML.GenreTraining/**" />
+    <Content Remove="Biblioteca.ML.GenreTraining/**" />
+    <None Remove="Biblioteca.ML.GenreTraining/**" />
   </ItemGroup>
 
 </Project>

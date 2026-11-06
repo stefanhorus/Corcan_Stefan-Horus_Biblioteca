@@ -139,3 +139,19 @@ După fix, aceleași cereri au salvat `49.00` și `52.00`. Am refăcut baza de d
 * **Cititorul 999** nu există în datele de antrenare, deci modelul întoarce `NaN` pentru toate cărțile și lista personalizată e goală. Se aplică cold start-ul: cele mai bine evaluate cărți cu cel puțin 5 evaluări, toate cu `"fallback": true`, iar `score` este media notelor, nu o predicție: Câinele din Baskerville (4,14), Domain-Driven Design (3,81), Fata cu un tatuaj de dragon (3,81), Dune (3,74), Istoria critică a românilor (3,72). Am verificat cu SQL direct (`GROUP BY BookID HAVING COUNT(*) >= 5 ORDER BY AVG(Stars) DESC`).
 * Diferența: 5 primește recomandări personale (scoruri prezise, fără cărțile citite), 999 primește aceeași listă de „populare” ca orice cititor nou.
 * Abatere: proiectul meu nu are grupul `/api/v2/books` și fișierul `.http` de la Î3, așa că am adăugat endpoint-ul direct în `Program.cs` și am creat `Intalnirea1.http`.
+
+## A4 · Clasificarea genului din descriere
+
+Proiectul consolă este în `Biblioteca.ML.GenreTraining/` (exclus din compilarea aplicației MVC din `Intalnirea1.csproj`). `book-descriptions.csv` are 1270 de descrieri în 9 genuri; cele mai puține exemple sunt la Poezie (112) și Nuvelă (110), restul au 142–152.
+
+* **MicroAccuracy: 74,7% · MacroAccuracy: 74,5%.**
+* De ce diferă: MicroAccuracy numără toate predicțiile corecte din setul de test, deci fiecare carte contează la fel și clasele cu multe exemple cântăresc mai mult. MacroAccuracy calculează acuratețea separat pentru fiecare gen și face media, deci fiecare gen contează la fel. Poezie (recall 0,64) și Nuvelă (0,63) sunt și cele mai slab recunoscute, ceea ce trage în jos media pe genuri. La mine diferența e mică (0,2 puncte procentuale), pentru că genurile sunt aproape echilibrate în date (110–152 de exemple fiecare).
+* Matricea de confuzie (setul de test). Cele mai dese confuzii:
+  * **Poezie ↔ Nuvelă**: 6 poezii prezise ca nuvele, 5 nuvele prezise ca poezii;
+  * **Programare → SF** (6) și **SF → Programare** (4), plus **Programare → Istorie și eseu** (5);
+  * **Clasic universal → Roman românesc** (6).
+
+  Este logic: descrierile (sintetice) amestecă intenționat teme între genuri — nuvelele și poeziile folosesc același vocabular („amintirile”, „metafore”, „o întâmplare”), cărțile de programare și SF au în comun „inteligența artificială”, „tehnologia”, „stație spațială”, iar romanele clasice și cele românești au aceleași teme („moștenirea”, „clasa socială”, „vinovăția”). Fantasy și Polițist au vocabular distinctiv („dragon”, „vrăjitor”; „suspecții”, „alibiul”) și au cea mai mare precizie (0,82 și 0,92).
+* **Test cu descrierea lui Dune** din seed („Pe o planetă deșertică, controlul unei resurse rare decide soarta unui imperiu.”): **SF, 79% încredere** — corect. Am testat și din browser, cu butonul „Sugerează genul” din formularul Carte nouă. Alte cărți din catalog: Câinele din Baskerville → Polițist 99,9%, Plumb → Poezie 93%, Hobbitul → Fantasy 41% (corect, dar nesigur); **Clean Code → SF 48% (greșit, ar fi Programare)**, pentru că descrierea lui scurtă nu conține cuvintele din datele de antrenare pentru Programare.
+* **Descriere ambiguă** „un detectiv pe o stație spațială”: **SF, 82% încredere**. Modelul e destul de sigur pe SF deși „detectiv” trimite la Polițist: „stație spațială” apare foarte des în exemplele SF, iar „detectiv” singur apare rar. Încrederea mare nu înseamnă că predicția e corectă — e doar cea mai mare probabilitate dintre cele 9 genuri.
+* Cerere cu descriere goală → răspuns 400 „Descrierea este goală.”, iar pagina afișează „Scrieți o descriere.”.

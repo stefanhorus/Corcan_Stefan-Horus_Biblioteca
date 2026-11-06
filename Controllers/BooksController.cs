@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.ML;
 using Intalnirea1.Data;
 using Intalnirea1.Models;
 
@@ -91,6 +92,19 @@ namespace Intalnirea1.Controllers
             }
 
             return View(book);
+        }
+
+        public record SuggestGenreRequest(string Description);
+
+        // POST: Books/SuggestGenre  (apelat din formularul Create, prin fetch)
+        [HttpPost]
+        public IActionResult SuggestGenre([FromBody] SuggestGenreRequest req,
+            [FromServices] PredictionEnginePool<BookText, GenrePrediction> pool)
+        {
+            if (string.IsNullOrWhiteSpace(req.Description))
+                return BadRequest("Descrierea este goală.");
+            var p = pool.Predict("GenreClassifier", new BookText { Description = req.Description });
+            return Json(new { genre = p.Genre, confidence = p.Score.Max() });
         }
 
         // GET: Books/Create
