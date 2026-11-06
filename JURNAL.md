@@ -126,3 +126,8 @@ După fix, aceleași cereri au salvat `49.00` și `52.00`. Am refăcut baza de d
 
 * Am importat `book-ratings.csv` din pagina Administrare: **6599 de evaluări** importate (300 de cititori distincți, media 3,25). Numărul se potrivește cu rândurile de date din fișier (fără antet).
 * Observație: importul nu verifică duplicatele, deci o a doua încărcare a aceluiași fișier ar dubla evaluările.
+
+## A2 · Reantrenarea din aplicație
+
+* Butonul „Reantrenează modelul de recomandare” a antrenat pe **6599 de evaluări, RMSE = 0,72** (aceeași valoare ca aplicația consolă din Î2).
+* Fără repornirea aplicației, `/Recommendations?userId=5` s-a schimbat imediat: înainte — Domain-Driven Design 4,42 · The Pragmatic Programmer 4,09 · Designing Data-Intensive Applications 4,08 · C# in Depth 3,89 · Câinele din Baskerville 3,64; după — Domain-Driven Design 4,49 · Designing Data-Intensive Applications 4,22 · The Pragmatic Programmer 4,08 · C# in Depth 3,98 · Câinele din Baskerville 3,82. `PredictionEnginePool` a fost înregistrat cu `watchForChanges: true`, deci a reîncărcat `MLModels/BookRecommender.zip` când fișierul s-a schimbat. Scorurile diferă puțin pentru că datele vin acum din baza de date (altă ordine, deci altă împărțire train/test) și antrenarea Matrix Factorization folosește mai multe fire de execuție.

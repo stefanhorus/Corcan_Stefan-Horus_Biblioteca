@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Intalnirea1.Data;
 using Intalnirea1.Models;
 using Microsoft.Extensions.ML;
+using Intalnirea1.Services;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<LibraryContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("LibraryContext") ?? throw new InvalidOperationException("Connection string 'LibraryContext' not found.")));
@@ -15,6 +16,8 @@ builder.Services
     .FromFile(modelName: "BookRecommender",
               filePath: "MLModels/BookRecommender.zip",
               watchForChanges: true);
+
+builder.Services.AddScoped<RecommenderTrainer>();
 
 var app = builder.Build();
 
