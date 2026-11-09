@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -30,11 +31,19 @@
     </None>
   </ItemGroup>
 
-  <!-- Proiectul consolă pentru antrenarea clasificatorului de gen are propriul .csproj -->
+  <ItemGroup>
+    <Protobuf Include="Protos\recommender.proto" GrpcServices="Server" />
+  </ItemGroup>
+
+  <!-- Proiectele consolă (antrenarea genului, clientul gRPC) au propriul .csproj -->
   <ItemGroup>
     <Compile Remove="Biblioteca.ML.GenreTraining/**" />
     <Content Remove="Biblioteca.ML.GenreTraining/**" />
     <None Remove="Biblioteca.ML.GenreTraining/**" />
+    <Compile Remove="Biblioteca.Client/**" />
+    <Content Remove="Biblioteca.Client/**" />
+    <None Remove="Biblioteca.Client/**" />
+    <Protobuf Remove="Biblioteca.Client/**" />
   </ItemGroup>
 
 </Project>
