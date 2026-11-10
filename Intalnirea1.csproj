@@ -20,6 +20,7 @@
     <PackageReference Include="Microsoft.Extensions.ML" Version="5.0.1" />
     <PackageReference Include="Microsoft.ML.Recommender" Version="0.23.1" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,7 +36,7 @@
     <Protobuf Include="Protos\recommender.proto" GrpcServices="Server" />
   </ItemGroup>
 
-  <!-- Proiectele consolă (antrenarea genului, clientul gRPC) au propriul .csproj -->
+  <!-- Proiectele consolă (antrenarea genului, clientul gRPC, agentul MCP) au propriul .csproj -->
   <ItemGroup>
     <Compile Remove="Biblioteca.ML.GenreTraining/**" />
     <Content Remove="Biblioteca.ML.GenreTraining/**" />
@@ -44,6 +45,9 @@
     <Content Remove="Biblioteca.Client/**" />
     <None Remove="Biblioteca.Client/**" />
     <Protobuf Remove="Biblioteca.Client/**" />
+    <Compile Remove="Biblioteca.Agent/**" />
+    <Content Remove="Biblioteca.Agent/**" />
+    <None Remove="Biblioteca.Agent/**" />
   </ItemGroup>
 
 </Project>

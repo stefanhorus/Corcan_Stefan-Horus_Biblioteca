@@ -25,6 +25,10 @@ builder.Services.AddScoped<RecommenderTrainer>();
 builder.Services.AddGrpc();
 builder.Services.AddScoped<RecommendationService>();
 
+builder.Services.AddMcpServer()
+    .WithHttpTransport()
+    .WithToolsFromAssembly();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -86,5 +90,6 @@ app.MapGet("/api/v2/readers/{id:int}/recommendations",
     .WithTags("Recomandări");
 
 app.MapGrpcService<RecommenderGrpcService>();
+app.MapMcp("/mcp");
 
 app.Run();
