@@ -192,3 +192,20 @@ var byAuthor = (await db.Rating
 * SQLite in loc de SQL Server, ca la I4.
 * Nu aveam API-ul de la I3, asa ca am pus endpoint-ul direct in `Program.cs` si am facut un fisier `.http` nou.
 * Proiectul consola pentru clasificarea genului e in folderul `Biblioteca.ML.GenreTraining/`.
+
+---
+
+# Laboratorul I9 · Corcan Stefan-Horus · nr. matricol 121200055 · varianta A0 · B1
+
+|Parametru|Valoarea mea|
+|-|-|
+|A0 · pragul „Foarte recomandata”|4,0|
+|A0 · pragul „Recomandata”|3,0|
+|B1 · tool-ul MCP din S2|books_by_year|
+|Cititorul meu|1055 (1000 + 055)|
+
+## A1 · Portalul cititorului
+
+* Proiectul `Biblioteca.Portal` (MVC) apeleaza serviciul gRPC `Recommender` al Bibliotecii. Adresa (`https://localhost:7245`) e in `appsettings.json`, la `Biblioteca:GrpcAddress`.
+* Cititorul **1055** primeste Cainele din Baskerville 4,14, Domain-Driven Design 3,81, Fata cu un tatuaj de dragon 3,81, Dune 3,74 si Istoria critica a romanilor 3,72, toate cu eticheta **„cititor nou”**.
+* De ce apare eticheta: cititorul 1055 nu are nicio evaluare in baza de date si nu exista nici in datele pe care s-a antrenat modelul. Modelul nu poate prezice nimic pentru el, asa ca serviciul trece pe cold start (cele mai bine notate carti) si pune `fallback = true`. Pentru cititorul 5, care are evaluari, eticheta nu apare.

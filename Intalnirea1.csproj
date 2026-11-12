@@ -38,7 +38,7 @@
     <Protobuf Include="Protos\recommender.proto" GrpcServices="Server" />
   </ItemGroup>
 
-  <!-- Proiectele consolă (antrenarea genului, clientul gRPC, agentul MCP, embeddings) au propriul .csproj -->
+  <!-- Proiectele consolă (antrenarea genului, clientul gRPC, agentul MCP, embeddings, portalul) au propriul .csproj -->
   <ItemGroup>
     <Compile Remove="Biblioteca.ML.GenreTraining/**" />
     <Content Remove="Biblioteca.ML.GenreTraining/**" />
@@ -53,6 +53,10 @@
     <Compile Remove="Biblioteca.Embeddings/**" />
     <Content Remove="Biblioteca.Embeddings/**" />
     <None Remove="Biblioteca.Embeddings/**" />
+    <Compile Remove="Biblioteca.Portal/**" />
+    <Content Remove="Biblioteca.Portal/**" />
+    <None Remove="Biblioteca.Portal/**" />
+    <Protobuf Remove="Biblioteca.Portal/**" />
   </ItemGroup>
 
 </Project>
