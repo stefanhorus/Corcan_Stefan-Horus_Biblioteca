@@ -25,13 +25,14 @@
 @if (Model.Books.Count > 0)
 {
     <table class="table">
-        <thead><tr><th>Carte</th><th>Scor</th><th></th></tr></thead>
+        <thead><tr><th>Carte</th><th>Scor</th><th>Etichetă</th><th></th></tr></thead>
         <tbody>
         @foreach (var b in Model.Books)
         {
             <tr>
                 <td>@b.Title</td>
                 <td>@b.Score.ToString("0.00")</td>
+                <td>@b.Label</td>
                 <td>@if (b.Fallback) { <span class="badge bg-secondary">cititor nou</span> }</td>
             </tr>
         }

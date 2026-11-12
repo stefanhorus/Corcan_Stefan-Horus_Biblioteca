@@ -209,3 +209,11 @@ var byAuthor = (await db.Rating
 * Proiectul `Biblioteca.Portal` (MVC) apeleaza serviciul gRPC `Recommender` al Bibliotecii. Adresa (`https://localhost:7245`) e in `appsettings.json`, la `Biblioteca:GrpcAddress`.
 * Cititorul **1055** primeste Cainele din Baskerville 4,14, Domain-Driven Design 3,81, Fata cu un tatuaj de dragon 3,81, Dune 3,74 si Istoria critica a romanilor 3,72, toate cu eticheta **„cititor nou”**.
 * De ce apare eticheta: cititorul 1055 nu are nicio evaluare in baza de date si nu exista nici in datele pe care s-a antrenat modelul. Modelul nu poate prezice nimic pentru el, asa ca serviciul trece pe cold start (cele mai bine notate carti) si pune `fallback = true`. Pentru cititorul 5, care are evaluari, eticheta nu apare.
+
+## A2 · Campul label in contract
+
+* Am adaugat `string label = 5;` in `BookScore` (doar in `recommender.proto` din Biblioteca) si eticheta in `ToMessage`, cu pragurile A0: „Foarte recomandata” de la 4,0, „Recomandata” de la 3,0, sub asta „Neutra”, iar pentru cold start „Populara (cititor nou)”.
+* **Portalul cu proto-ul vechi:** merge normal, aceleasi carti si scoruri. Nu stie de campul 5, asa ca il ignora.
+* **Biblioteca.Client din I6, cu proto-ul vechi:** optiunea 1 (unary) si optiunea 2 (server streaming) merg la fel ca inainte, fara nicio eroare. Si el ignora campul nou.
+* **Portalul cu proto-ul nou:** apare coloana Eticheta. Cititorul 5: Designing Data-Intensive Applications 4,22 Foarte recomandata · Fata cu un tatuaj de dragon 3,74 Recomandata · Morometii, Numele vantului, Plumb Neutra. Cititorul 1055: toate „Populara (cititor nou)”.
+* **Experiment `title = 6` doar in Biblioteca:** in portal, coloana **Carte a ramas goala**, iar scorul si eticheta au aparut normal. Portalul cauta titlul la campul 2, serverul il trimite la campul 6, deci portalul nu-l gaseste, pune string gol si ignora campul 6. Nu apare nicio eroare, doar date lipsa. Am revenit la `title = 2` si titlurile au aparut din nou.
