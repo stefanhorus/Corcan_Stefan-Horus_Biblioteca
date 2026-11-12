@@ -1,0 +1,22 @@
+@model RatingFormViewModel
+@{ ViewData["Title"] = "Șterge evaluarea"; }
+
+<h1>Ștergi evaluarea?</h1>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+else
+{
+    <p><strong>@Model.Title</strong>: @Model.Stars ★ (evaluarea @Model.Id, cititorul @Model.ReaderId)</p>
+}
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ReaderId" />
+    <input type="hidden" asp-for="Title" />
+    <input type="hidden" asp-for="Stars" />
+    <button type="submit" class="btn btn-danger">Da, șterge</button>
+    <a asp-action="Index" asp-route-readerId="@Model.ReaderId">Nu, înapoi</a>
+</form>

@@ -1,0 +1,22 @@
+@model RatingFormViewModel
+@{ ViewData["Title"] = "Modifică nota"; }
+
+<h1>Modifică nota</h1>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+
+<form asp-action="Edit" method="post" class="col-md-4">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ReaderId" />
+    <input type="hidden" asp-for="Title" />
+    <p><strong>@Model.Title</strong> (evaluarea @Model.Id, cititorul @Model.ReaderId)</p>
+    <div class="mb-2">
+        <label asp-for="Stars" class="form-label"></label>
+        <input asp-for="Stars" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Salvează</button>
+    <a asp-action="Index" asp-route-readerId="@Model.ReaderId">Înapoi</a>
+</form>

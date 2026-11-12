@@ -229,3 +229,24 @@ La inceputul lui `Recommend` si `StreamRecommendations` verific cererea (in meto
 | aplicatia Biblioteca oprita | **Unavailable** | Error connecting to subchannel. |
 
 Portalul afiseaza toate erorile in pagina, nu ca pagina de eroare. In al treilea caz, eroarea nu vine de la serviciu, ci de la client, pentru ca nu are la cine sa se conecteze. Dupa repornirea Bibliotecii, recomandarile merg din nou fara sa repornesc portalul.
+
+## S1 · Evaluarile mele prin gRPC
+
+* **Serverul:** `ReaderRatingsGrpcService : ReaderRatings.ReaderRatingsBase`, cu toate cele 5 metode, asincron prin `LibraryContext` si cu `context.CancellationToken`, inregistrat cu `app.MapGrpcService<ReaderRatingsGrpcService>()`. Pentru `created_at` folosesc `Timestamp.FromDateTime(DateTime.SpecifyKind(..., DateTimeKind.Utc))`, pentru ca datele din SQLite vin fara `Kind`.
+* **Coduri:** `NotFound` pentru o evaluare sau o carte inexistenta, `InvalidArgument` pentru o nota in afara intervalului 1–5 sau pentru `reader_id <= 0`. Mesajele sunt in romana si spun ce e gresit.
+* **Portalul:** `RatingsController` cu `ReaderRatings.ReaderRatingsClient` (prin `AddGrpcClient`) si paginile Index (citita din fluxul `ListRatings`), Create, Edit (doar nota) si Delete (cu confirmare). Erorile apar in pagina.
+
+Teste cu cititorul meu, **1055**:
+
+| Pas | Rezultat |
+|-|-|
+| adaug Baltagul (ID 1), 5 stele | salvata (evaluarea 6602) |
+| adaug Ion (ID 4), 3 stele | salvata (evaluarea 6603) |
+| modific Ion la 4 stele | lista arata Ion · 4 |
+| sterg Baltagul (cu pagina de confirmare) | a disparut din lista; in baza de date a ramas doar Ion · 4 |
+| carte inexistenta, ID 999 | **NotFound**: Cartea cu ID-ul 999 nu exista in catalog. |
+| nota 7 | **InvalidArgument**: Nota trebuie sa fie intre 1 si 5 stele (ai trimis 7). |
+| evaluare inexistenta (99999) | **NotFound**: Evaluarea cu ID-ul 99999 nu exista. |
+| cititorul -1 | **InvalidArgument**: reader_id trebuie sa fie un numar pozitiv. |
+
+**Intrebarea: oricine poate scrie orice ID de cititor. Ce ar trebui schimbat?** Portalul ar trebui sa aiba autentificare: cititorul se logheaza, iar ID-ul lui vine din contul logat, nu dintr-un camp din formular. Portalul trimite apoi la gRPC un token (de exemplu JWT, in header-ul `Authorization`), iar serverul gRPC verifica la fiecare apel ca `reader_id` din cerere e acelasi cu cel din token si ca evaluarea modificata sau stearsa ii apartine. Altfel raspunde cu `PermissionDenied`. Verificarea trebuie facuta pe server, nu doar in portal, pentru ca serviciul gRPC poate fi apelat si direct.

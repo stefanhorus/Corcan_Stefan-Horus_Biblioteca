@@ -98,6 +98,7 @@ app.MapGet("/api/v2/readers/{id:int}/recommendations",
     .WithTags("Recomandări");
 
 app.MapGrpcService<RecommenderGrpcService>();
+app.MapGrpcService<ReaderRatingsGrpcService>();
 app.MapMcp("/mcp");
 
 // Î8: construim indexul o singură dată, la pornire (câteva secunde)

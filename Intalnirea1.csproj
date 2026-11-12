@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <Protobuf Include="Protos\recommender.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos\ratings.proto" GrpcServices="Server" />
   </ItemGroup>
 
   <!-- Proiectele consolă (antrenarea genului, clientul gRPC, agentul MCP, embeddings, portalul) au propriul .csproj -->
