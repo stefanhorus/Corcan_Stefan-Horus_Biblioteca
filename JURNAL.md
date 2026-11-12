@@ -217,3 +217,15 @@ var byAuthor = (await db.Rating
 * **Biblioteca.Client din I6, cu proto-ul vechi:** optiunea 1 (unary) si optiunea 2 (server streaming) merg la fel ca inainte, fara nicio eroare. Si el ignora campul nou.
 * **Portalul cu proto-ul nou:** apare coloana Eticheta. Cititorul 5: Designing Data-Intensive Applications 4,22 Foarte recomandata · Fata cu un tatuaj de dragon 3,74 Recomandata · Morometii, Numele vantului, Plumb Neutra. Cititorul 1055: toate „Populara (cititor nou)”.
 * **Experiment `title = 6` doar in Biblioteca:** in portal, coloana **Carte a ramas goala**, iar scorul si eticheta au aparut normal. Portalul cauta titlul la campul 2, serverul il trimite la campul 6, deci portalul nu-l gaseste, pune string gol si ignora campul 6. Nu apare nicio eroare, doar date lipsa. Am revenit la `title = 2` si titlurile au aparut din nou.
+
+## A3 · Validare si coduri de stare gRPC
+
+La inceputul lui `Recommend` si `StreamRecommendations` verific cererea (in metoda `ValidateRequest`). Teste din portal:
+
+| Test | StatusCode | Mesaj (detalii) |
+|-|-|-|
+| cititorul -3 | **InvalidArgument** | reader_id trebuie sa fie un numar pozitiv. |
+| top = 50 | **InvalidArgument** | top poate fi cel mult 20. |
+| aplicatia Biblioteca oprita | **Unavailable** | Error connecting to subchannel. |
+
+Portalul afiseaza toate erorile in pagina, nu ca pagina de eroare. In al treilea caz, eroarea nu vine de la serviciu, ci de la client, pentru ca nu are la cine sa se conecteze. Dupa repornirea Bibliotecii, recomandarile merg din nou fara sa repornesc portalul.

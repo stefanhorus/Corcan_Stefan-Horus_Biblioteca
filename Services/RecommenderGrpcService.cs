@@ -17,6 +17,7 @@ public class RecommenderGrpcService(
     public override async Task<RecommendReply> Recommend(
         RecommendRequest request, ServerCallContext context)
     {
+        ValidateRequest(request);
         var list = await recs.RecommendAsync(
             request.ReaderId, request.Top, context.CancellationToken);
 
@@ -31,6 +32,7 @@ public class RecommenderGrpcService(
         IServerStreamWriter<BookScore> responseStream,
         ServerCallContext context)
     {
+        ValidateRequest(request);
         var list = await recs.RecommendAsync(
             request.ReaderId, request.Top, context.CancellationToken);
 
@@ -73,6 +75,17 @@ public class RecommenderGrpcService(
             Rejected = rejected,
             Average = saved == 0 ? 0 : sum / saved
         };
+    }
+
+    // Î9-A3: cererile invalide primesc InvalidArgument, cu un mesaj care spune ce e greșit
+    private static void ValidateRequest(RecommendRequest request)
+    {
+        if (request.ReaderId <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument,
+                "reader_id trebuie să fie un număr pozitiv."));
+        if (request.Top > 20)
+            throw new RpcException(new Status(StatusCode.InvalidArgument,
+                "top poate fi cel mult 20."));
     }
 
     private static BookScore ToMessage(Recommendation r) => new()
