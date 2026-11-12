@@ -250,3 +250,51 @@ Teste cu cititorul meu, **1055**:
 | cititorul -1 | **InvalidArgument**: reader_id trebuie sa fie un numar pozitiv. |
 
 **Intrebarea: oricine poate scrie orice ID de cititor. Ce ar trebui schimbat?** Portalul ar trebui sa aiba autentificare: cititorul se logheaza, iar ID-ul lui vine din contul logat, nu dintr-un camp din formular. Portalul trimite apoi la gRPC un token (de exemplu JWT, in header-ul `Authorization`), iar serverul gRPC verifica la fiecare apel ca `reader_id` din cerere e acelasi cu cel din token si ca evaluarea modificata sau stearsa ii apartine. Altfel raspunde cu `PermissionDenied`. Verificarea trebuie facuta pe server, nu doar in portal, pentru ca serviciul gRPC poate fi apelat si direct.
+
+## S2 · Tool-ul MCP books_by_year (varianta B1)
+
+* Metoda `BooksByYear` din `Mcp/LibraryTools.cs`, cu `[McpServerTool(Name = "books_by_year", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]`, `[Description]` pe metoda si pe fiecare parametru, interogare asincrona cu `AsNoTracking`. Intoarce o lista de record-uri `BookByYear(Id, Title, Author, Year, Price)`, cel mult 10.
+* **Erori actionabile** (`McpException`): interval inversat („Apeleaza din nou cu fromYear = 1920 si toYear = 1939”), `top` in afara 1–10 si interval fara carti (spune intervalul de ani pe care il are catalogul).
+
+**Schema JSON (inspector, optiunea 1):**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "fromYear": { "description": "Primul an din interval, de exemplu 1920.", "type": "integer" },
+    "toYear":   { "description": "Ultimul an din interval, de exemplu 1939. Trebuie să fie mai mare sau egal cu fromYear.", "type": "integer" },
+    "top":      { "description": "Câte cărți să întoarcă, între 1 și 10 (implicit 10).", "type": "integer", "default": 10 }
+  },
+  "required": [ "fromYear", "toYear" ]
+}
+```
+
+**Rezultatul unui apel**, `books_by_year({"fromYear":1920,"toYear":1939})`, `IsError` gol (fara eroare), 10 carti: Ion 1920 · Padurea spanzuratilor 1922 · Cuvinte potrivite 1927 · Craii de Curtea-Veche 1929 · Baltagul 1930 · Ultima noapte de dragoste, intaia noapte de razboi 1930 · Maitreyi 1933 · Crima din Orient Express 1934 · Hobbitul 1937 · Enigma Otiliei 1938. Primul element arata asa: `{"id":4,"title":"Ion","author":"Liviu Rebreanu","year":1920,"price":42.0}`.
+
+Apeluri gresite, toate cu `IsError: True`:
+* `{"fromYear":1939,"toYear":1920}` → Intervalul e inversat: fromYear (1939) e mai mare decat toYear (1920). Apeleaza din nou cu fromYear = 1920 si toYear = 1939.
+* `{"fromYear":1700,"toYear":1750}` → Nu exista carti aparute intre 1700 si 1750. Catalogul are carti aparute intre 1813 si 2021; alege un interval din acest domeniu.
+* `{"fromYear":1900,"toYear":2000,"top":50}` → top trebuie sa fie intre 1 si 10 (ai trimis 50).
+
+**Agentul (optiunea 2, llama3.2):**
+
+| Intrebarea | Linia [tool] | Raspunsul | Corect? |
+|-|-|-|-|
+| Ce carti din catalog au aparut intre 1920 si 1939? | `books_by_year(fromYear=1920, toYear=1939, top=10)` | cele 10 carti de mai sus, cu anii | **Da** (doar cateva greseli de scriere in titluri, de ex. „Padurea spanzuratorilor”) |
+| Ce carti au aparut dupa anul 2000? | `books_by_year(fromYear=2000, toYear=1939, top=10)` | „Nu am putut gasi nicio carte ... dupa anul 2000.” | **Nu.** A luat 1939 din intrebarea de dinainte, a primit eroarea de interval inversat si nu a mai incercat din nou, desi mesajul ii spunea ce sa schimbe. In catalog sunt 8 carti dupa 2000 (Domain-Driven Design 2003 ... Carte noua 2021). |
+| Ce carti de Rebreanu are biblioteca? (nu ar trebui sa foloseasca tool-ul meu) | `search_books(query=Rebreanu)` | Ion (1920), Padurea spanzuratilor (1922) | **Da**, si corect nu a folosit `books_by_year`. |
+
+## Folosirea AI (I9)
+
+* **Instrument:** Claude (Claude Code), ca asistent la scrierea codului si la testare, la pasii A1–S2. Rezultatele din jurnal le-am obtinut rulând aplicatiile si le-am verificat in baza de date.
+* **Exemplu de cerere:** „fa ce trebuie la laboratorul 9” (impreuna cu PDF-ul laboratorului).
+* **O situatie in care raspunsul a fost gresit:** la S2, codul propus pentru inspector (apelul unui tool cu argumente JSON) avea un string rupt pe doua randuri, pentru ca `\n` a fost transformat intr-o linie noua reala. Build-ul a dat eroarea `CS1010: Newline in constant`. Am corectat inapoi la `Console.Write("\nAlt tool de apelat (Enter = iesire): ");`.
+
+## Abateri de la cerinte (I9)
+
+* Baza de date e SQLite, ca la laboratoarele anterioare.
+* Portul https al Bibliotecii este **7245**, nu 7123, deci in `appsettings.json` din portal am pus `https://localhost:7245`.
+* Inspectorul de pe Moodle apela doar `search_books`. Am adaugat in optiunea 1 un pas care apeleaza orice tool cu argumente JSON, ca sa pot arata rezultatul lui `books_by_year`.
+* Tool-ul `books_by_genre` exista deja din Fisa 7 (Misiunea 3). Tool-ul variantei mele pentru acest laborator este `books_by_year`.
+* `Biblioteca.Client` (I6) a ramas intentionat cu `recommender.proto` vechi, pentru testul de compatibilitate de la A2.

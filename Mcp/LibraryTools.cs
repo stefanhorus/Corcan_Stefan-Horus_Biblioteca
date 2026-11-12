@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Intalnirea1.Data;
 using Intalnirea1.Services;
@@ -126,4 +127,45 @@ public static class LibraryTools
             ? $"Nu există cărți în genul „{genre}”."
             : JsonSerializer.Serialize(books, Json);
     }
+
+    // Î9-S2 · varianta B1: cărțile apărute într-un interval de ani
+    [McpServerTool(Name = "books_by_year", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false),
+     Description("Întoarce cărțile din catalog apărute într-un interval de ani (inclusiv capetele), " +
+                 "ordonate după an. Pentru fiecare carte: ID, titlu, autor, an și preț în lei. Cel mult 10 cărți.")]
+    public static async Task<List<BookByYear>> BooksByYear(
+        LibraryContext db,
+        [Description("Primul an din interval, de exemplu 1920.")] int fromYear,
+        [Description("Ultimul an din interval, de exemplu 1939. Trebuie să fie mai mare sau egal cu fromYear.")] int toYear,
+        [Description("Câte cărți să întoarcă, între 1 și 10 (implicit 10).")] int top = 10,
+        CancellationToken ct = default)
+    {
+        if (fromYear > toYear)
+            throw new McpException(
+                $"Intervalul e inversat: fromYear ({fromYear}) e mai mare decât toYear ({toYear}). " +
+                $"Apelează din nou cu fromYear = {toYear} și toYear = {fromYear}.");
+        if (top is < 1 or > 10)
+            throw new McpException($"top trebuie să fie între 1 și 10 (ai trimis {top}).");
+
+        var books = await db.Book.AsNoTracking()
+            .Where(b => b.Year >= fromYear && b.Year <= toYear)
+            .OrderBy(b => b.Year).ThenBy(b => b.Title)
+            .Take(top)
+            .Select(b => new BookByYear(b.ID, b.Title,
+                b.Author != null ? b.Author.FirstName + " " + b.Author.LastName : "",
+                b.Year, b.Price))
+            .ToListAsync(ct);
+
+        if (books.Count == 0)
+        {
+            var minYear = await db.Book.MinAsync(b => b.Year, ct);
+            var maxYear = await db.Book.MaxAsync(b => b.Year, ct);
+            throw new McpException(
+                $"Nu există cărți apărute între {fromYear} și {toYear}. " +
+                $"Catalogul are cărți apărute între {minYear} și {maxYear}; alege un interval din acest domeniu.");
+        }
+        return books;
+    }
 }
+
+// rezultatul lui books_by_year: un record mic pentru fiecare carte
+public record BookByYear(int Id, string Title, string Author, int Year, decimal Price);

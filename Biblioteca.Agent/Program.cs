@@ -86,6 +86,25 @@ async Task Inspector()
     Console.WriteLine($"IsError: {result.IsError}");
     foreach (var block in result.Content.OfType<TextContentBlock>())
         Console.WriteLine(block.Text);
+
+    // Î9-S2: apelul oricărui alt tool, cu argumentele date ca JSON (de ex. books_by_year)
+    while (true)
+    {
+        Console.Write("\nAlt tool de apelat (Enter = ieșire): ");
+        var name = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(name)) break;
+        Console.Write("Argumente JSON, de ex. {\"fromYear\":1920,\"toYear\":1939}: ");
+        var json = Console.ReadLine();
+        var args = string.IsNullOrWhiteSpace(json)
+            ? new Dictionary<string, object?>()
+            : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!
+                .ToDictionary(a => a.Key, a => (object?)a.Value);
+
+        CallToolResult r = await mcp.CallToolAsync(name.Trim(), args);
+        Console.WriteLine($"IsError: {r.IsError}");
+        foreach (var block in r.Content.OfType<TextContentBlock>())
+            Console.WriteLine(block.Text);
+    }
 }
 
 // M2
