@@ -1,87 +1,135 @@
-using System.ClientModel;
+// Biblioteca.Agent (actualizat pentru I8)
+// 1 = inspector (fara model de limbaj): ce vede clientul MCP
+// 2 = agentul: Ollama + tool-urile MCP ale Bibliotecii
+// 3 = NOU:cautare în documente (search_documents), fara model: fragmentele si scorurile
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using OpenAI;
+using System.ClientModel;
 
-// Serverul MCP al Bibliotecii (portul https din Properties/launchSettings.json) și modelul local din Ollama
+// Portul https al aplicatiei Biblioteca (launchSettings.json)
 const string McpEndpoint = "https://localhost:7245/mcp";
 const string OllamaEndpoint = "http://localhost:11434/v1";
-var modelName = args.Length > 0 ? args[0] : "llama3.2";
+const string Model = "llama3.2";
 
-await using var mcp = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
+var transport = new HttpClientTransport(new HttpClientTransportOptions
 {
-    Endpoint = new Uri(McpEndpoint),
-    Name = "Biblioteca"
-}));
+    Endpoint = new Uri(McpEndpoint)
+});
+await using McpClient mcp = await McpClient.CreateAsync(transport);
+IList<McpClientTool> tools = await mcp.ListToolsAsync();
 
-Console.WriteLine($"Conectat la {McpEndpoint}");
-Console.Write("1 · Inspector   2 · Agent   Alegeți: ");
-var choice = Console.ReadLine()?.Trim();
-
-if (choice == "1") await Inspector();
-else if (choice == "2") await Agent();
-
-// 1 · fără model de limbaj: descoperim tool-urile și apelăm search_books direct
-async Task Inspector()
+Console.Write("1 Inspector; 2 Agent; 3 Cautare in documente > ");
+switch (Console.ReadLine())
 {
-    var tools = await mcp.ListToolsAsync();
-    Console.WriteLine($"\nServerul expune {tools.Count} tool-uri:");
-    foreach (var tool in tools)
-    {
-        Console.WriteLine($"\n● {tool.Name}");
-        Console.WriteLine($"  descriere: {tool.Description}");
-        Console.WriteLine($"  schema:    {tool.JsonSchema.GetRawText()}");
-    }
-
-    Console.Write("\nCe caut cu search_books? (Enter = Rebreanu): ");
-    var query = Console.ReadLine();
-    if (string.IsNullOrWhiteSpace(query)) query = "Rebreanu";
-
-    var result = await mcp.CallToolAsync("search_books", new Dictionary<string, object?> { ["query"] = query });
-    Console.WriteLine($"\nRezultat (IsError = {result.IsError ?? false}):");
-    foreach (var block in result.Content)
-        Console.WriteLine(block is TextContentBlock text ? $"  [text] {text.Text}" : $"  [{block.Type}]");
+    case "1": await Inspector(); break;
+    case "3": await CautareDocumente(); break;
+    default: await Agent(); break;
 }
 
-// 2 · modelul primește lista de tool-uri și decide singur pe care le apelează
-async Task Agent()
+// I8 
+async Task CautareDocumente()
 {
-    var tools = await mcp.ListToolsAsync();
-
-    IChatClient chat = new OpenAIClient(new ApiKeyCredential("ollama"),
-            new OpenAIClientOptions { Endpoint = new Uri(OllamaEndpoint) })
-        .GetChatClient(modelName)
-        .AsIChatClient()
-        .AsBuilder()
-        .UseFunctionInvocation(configure: f => f.FunctionInvoker = async (ctx, ct) =>
-        {
-            // urma agentului: fiecare tool apelat, cu argumentele lui
-            Console.WriteLine($"  [tool] {ctx.Function.Name}({JsonSerializer.Serialize(ctx.Arguments)})");
-            return await ctx.Function.InvokeAsync(ctx.Arguments, ct);
-        })
-        .Build();
-
-    var options = new ChatOptions { Tools = [.. tools] };
-    Console.WriteLine($"\nAgent cu modelul {modelName}. O întrebare pe linie, linie goală = ieșire.");
-
     while (true)
     {
-        Console.Write("\n> ");
+        Console.Write("\nÎntrebare (Enter = ieșire): ");
+        var query = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(query)) break;
+        Console.Write("Sursa (regulament / carte / Enter = ambele): ");
+        var source = Console.ReadLine();
+        Console.Write("Câte fragmente (1–8, Enter = 3): ");
+        int top = int.TryParse(Console.ReadLine(), out var k) ? k : 3;
+
+        CallToolResult result = await mcp.CallToolAsync("search_documents",
+            new Dictionary<string, object?> { ["query"] = query, ["source"] = source, ["top"] = top });
+
+        if (result.IsError == true)
+        {
+            foreach (var b in result.Content.OfType<TextContentBlock>()) Console.WriteLine($"Eroare: {b.Text}");
+            continue;
+        }
+        foreach (var block in result.Content.OfType<TextContentBlock>())
+        {
+            using var doc = JsonDocument.Parse(block.Text);
+            int i = 1;
+            foreach (var hit in doc.RootElement.EnumerateArray())
+            {
+                Console.WriteLine($"\n{i++}. [{Camp(hit, "score").GetDouble():F3}] " +
+                                  $"{Camp(hit, "source")} · {Camp(hit, "title")}");
+                Console.WriteLine($"   {Camp(hit, "text")}");
+            }
+        }
+    }
+}
+
+// campul unui obiect JSON, indiferent de litere mari/mici (Score sau score)
+static JsonElement Camp(JsonElement e, string name) =>
+    e.EnumerateObject().First(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).Value;
+
+// M1
+async Task Inspector()
+{
+    foreach (var t in tools)
+    {
+        Console.WriteLine($"\n== {t.Name}\n{t.Description}");
+        Console.WriteLine(JsonSerializer.Serialize(t.JsonSchema,
+            new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    Console.Write("\nCăutați în catalog (search_books): ");
+    var query = Console.ReadLine() ?? "";
+    CallToolResult result = await mcp.CallToolAsync("search_books",
+        new Dictionary<string, object?> { ["query"] = query });
+
+    Console.WriteLine($"IsError: {result.IsError}");
+    foreach (var block in result.Content.OfType<TextContentBlock>())
+        Console.WriteLine(block.Text);
+}
+
+// M2
+async Task Agent()
+{
+    IChatClient chat = new ChatClientBuilder(
+            new OpenAIClient(new ApiKeyCredential("ollama"),
+                             new OpenAIClientOptions { Endpoint = new Uri(OllamaEndpoint) })
+                .GetChatClient(Model)
+                .AsIChatClient())
+        .UseFunctionInvocation()        // execută automat tool-urile cerute de model
+        .Build();
+
+    List<ChatMessage> messages =
+    [
+        new(ChatRole.System,
+            "Ești asistentul Bibliotecii FSEGA. Răspunzi în limba română. " +
+            "Pentru orice informație despre cărți, cititori sau recomandări folosește tool-urile. " +
+            "Nu inventa titluri, prețuri sau autori: dacă tool-urile nu întorc informația, spune că nu o ai. " +
+            // I8: regulile vin din regulament, prin search_documents
+            "Pentru reguli ale bibliotecii (împrumut, termene, penalități, program) folosește search_documents " +
+            "și răspunde doar din fragmentele găsite, menționând secțiunea din regulament. " +
+            "Dacă fragmentele nu conțin răspunsul, spune că regulamentul nu precizează.")
+    ];
+    var options = new ChatOptions { Tools = [.. tools] };
+
+    Console.WriteLine($"Tool-uri disponibile: {string.Join(", ", tools.Select(t => t.Name))}");
+    while (true)
+    {
+        Console.Write("\nTu: ");
         var question = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(question)) break;
 
-        // fiecare întrebare pornește o conversație nouă
-        List<ChatMessage> messages =
-        [
-            new(ChatRole.System,
-                "Ești asistentul Bibliotecii. Pentru informații despre cărți, autori, prețuri și recomandări " +
-                "folosește tool-urile disponibile. Răspunde în limba română."),
-            new(ChatRole.User, question)
-        ];
+        messages.Add(new(ChatRole.User, question));
+        ChatResponse response = await chat.GetResponseAsync(messages, options);
+        messages.AddMessages(response);
 
-        var response = await chat.GetResponseAsync(messages, options);
-        Console.WriteLine($"\n{response.Text}");
+        // urma agentului: ce tool-uri a apelat si cu ce argumente
+        foreach (var call in response.Messages.SelectMany(m => m.Contents).OfType<FunctionCallContent>())
+        {
+            var args = string.Join(", ", (call.Arguments ?? new Dictionary<string, object?>())
+                .Select(a => $"{a.Key}={a.Value}"));
+            Console.WriteLine($"  [tool] {call.Name}({args})");
+        }
+        Console.WriteLine($"Asistent: {response.Text}");
     }
 }
