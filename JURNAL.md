@@ -298,3 +298,25 @@ Apeluri gresite, toate cu `IsError: True`:
 * Inspectorul de pe Moodle apela doar `search_books`. Am adaugat in optiunea 1 un pas care apeleaza orice tool cu argumente JSON, ca sa pot arata rezultatul lui `books_by_year`.
 * Tool-ul `books_by_genre` exista deja din Fisa 7 (Misiunea 3). Tool-ul variantei mele pentru acest laborator este `books_by_year`.
 * `Biblioteca.Client` (I6) a ramas intentionat cu `recommender.proto` vechi, pentru testul de compatibilitate de la A2.
+
+---
+
+# Laboratorul I10 · Corcan Stefan-Horus · nr. matricol 121200055 · varianta A0 · B1
+
+|Parametru|Valoarea mea|
+|-|-|
+|A0 · documentul din S2|`Docs/cont-online.md` (intrebari frecvente despre contul online)|
+|B1 · experimentul din S1|modelul de embeddings: embeddinggemma vs nomic-embed-text (3 intrebari in engleza)|
+
+## A1 · Indexul urmeaza catalogul
+
+* In `DocumentIndex` am adaugat `IndexBookAsync` si `RemoveBookAsync`, iar `BooksController` le apeleaza dupa `SaveChangesAsync` la Create, Edit si Delete.
+* Test (Agent, optiunea 3, sursa carte), cu cautarea „un fiu de crai trece prin incercari grele, pacalit de un span”:
+  * inainte: Moara cu noroc 0,461 · Un vrajitor din Terramare 0,451 · Crima si pedeapsa 0,439;
+  * dupa ce am adaugat **Povestea lui Harap-Alb** (Ion Creanga, 1877, cu o descriere de 2 propozitii, ID 41): pe primul loc, **0,585**;
+  * dupa Edit (titlul a devenit „Povestea lui Harap-Alb (editie ilustrata)”): apare o singura data, cu titlul nou, **0,588**;
+  * o carte temporara (ID 42) a aparut in cautare dupa Create si a disparut dupa Delete.
+
+**(1) De ce cheia trebuie sa fie aceeasi (`carte-{ID}`)?** `UpsertAsync` cauta fragmentul dupa cheie. Daca cheia e aceeasi, fragmentul vechi e inlocuit. Daca ar fi diferita, la fiecare Edit s-ar adauga un fragment nou si cartea ar aparea de mai multe ori, si cu textul vechi. `RemoveBookAsync` sterge tot dupa aceasta cheie, deci altfel n-ar sterge fragmentul creat la pornire. La test, dupa Edit a ramas un singur rezultat pentru Harap-Alb.
+
+**(2) Baza a salvat cartea, dar Ollama e oprit.** Am testat: am oprit Ollama si am adaugat o carte. Pagina a dat **eroarea 500** (`HttpRequestException: Connection refused (localhost:11434)`), dar cartea **s-a salvat** in baza (ID 43). In index **nu a intrat**: nici dupa ce am pornit Ollama din nou, cautarea nu o gasea. Baza si indexul au ramas nesincronizate pana la repornirea aplicatiei (cand `BuildAsync` reface tot indexul) sau pana la urmatorul Edit al cartii. Utilizatorul vede o eroare, desi cartea a fost adaugata. Am sters apoi cartea de test.

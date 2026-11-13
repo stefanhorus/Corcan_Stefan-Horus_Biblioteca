@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.ML;
 using Intalnirea1.Data;
 using Intalnirea1.Models;
+using Intalnirea1.Rag;
 
 namespace Intalnirea1.Controllers
 {
@@ -15,11 +16,13 @@ namespace Intalnirea1.Controllers
     {
         private readonly LibraryContext _context;
         private readonly ILogger<BooksController> _logger;
+        private readonly DocumentIndex _index;
 
-        public BooksController(LibraryContext context, ILogger<BooksController> logger)
+        public BooksController(LibraryContext context, ILogger<BooksController> logger, DocumentIndex index)
         {
             _context = context;
             _logger = logger;
+            _index = index;
         }
 
         // GET: Books
@@ -126,6 +129,7 @@ namespace Intalnirea1.Controllers
             {
                 _context.Add(book);
                 await _context.SaveChangesAsync();
+                await _index.IndexBookAsync(_context, book.ID);   // Î10-A1: indexul urmează catalogul
                 return RedirectToAction(nameof(Index));
             }
             ViewData["GenreID"] = new SelectList(_context.Genre.OrderBy(g => g.Name), "ID", "Name", book.GenreID);
@@ -172,6 +176,7 @@ namespace Intalnirea1.Controllers
             book.Title = vm.Title; book.Price = vm.Price;
             book.AuthorID = vm.AuthorID; book.GenreID = vm.GenreID;
             await _context.SaveChangesAsync();
+            await _index.IndexBookAsync(_context, book.ID);
             return RedirectToAction(nameof(Index));
         }
 
@@ -207,6 +212,7 @@ namespace Intalnirea1.Controllers
             }
 
             await _context.SaveChangesAsync();
+            await _index.RemoveBookAsync(id);
             return RedirectToAction(nameof(Index));
         }
 

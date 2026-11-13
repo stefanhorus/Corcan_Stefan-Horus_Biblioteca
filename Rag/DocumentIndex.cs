@@ -72,6 +72,40 @@ public class DocumentIndex
             parts.Count, ChunkMode, books.Count);
     }
 
+    // Î10-A1: indexează (sau reindexează) o singură carte, după ID.
+    public async Task IndexBookAsync(LibraryContext db, int bookId, CancellationToken ct = default)
+    {
+        var b = await db.Book.AsNoTracking()
+            .Where(x => x.ID == bookId)
+            .Select(x => new
+            {
+                x.ID, x.Title, x.Description,
+                Author = x.Author == null ? "" : x.Author.FirstName + " " + x.Author.LastName,
+                Genre = x.Genre == null ? "" : x.Genre.Name
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (b is null || string.IsNullOrWhiteSpace(b.Description))
+        {
+            await RemoveBookAsync(bookId, ct);       // fără descriere = fără fragment
+            return;
+        }
+
+        var text = $"{b.Title}, de {b.Author} ({b.Genre}). {b.Description}";
+        await _collection.UpsertAsync(new DocumentChunk
+        {
+            Id = $"carte-{b.ID}",                    // aceeași cheie ca la BuildAsync
+            Source = "carte",
+            Title = $"{b.Title} (ID {b.ID})",
+            Text = text,
+            Embedding = text
+        }, ct);
+    }
+
+    // Î10-A1: scoate cartea din index.
+    public Task RemoveBookAsync(int bookId, CancellationToken ct = default)
+        => _collection.DeleteAsync($"carte-{bookId}", ct);
+
     public async Task<List<DocumentHit>> SearchAsync(string query, int top, string? source, CancellationToken ct = default)
     {
         var options = source is null
