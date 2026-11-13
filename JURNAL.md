@@ -415,3 +415,32 @@ Can people from outside the faculty borrow books?              1        0,444
 * Cele 3 intrebari in engleza au fost gasite pe locul 1 de ambele modele.
 
 **Concluzia:** pastrez **embeddinggemma**. E mult mai bun pe intrebarile in romana (recall@1 76,5% fata de 41,2%) si gaseste tot pe engleza. Scorurile lui nomic sunt mai mari in general (0,6–0,78), dar asta nu inseamna ca alege mai bine: la nomic toate fragmentele au scoruri apropiate, deci un prag de scor ca la A3 ar trebui ales altfel pentru fiecare model. Dupa experiment am revenit la `embeddinggemma`.
+
+## S2 · Un document nou: `Docs/cont-online.md` (varianta A0)
+
+* **Documentul:** „Contul online al cititorului · Intrebari frecvente”, cu nota ca e fictiv, si **11 sectiuni** cu reguli concrete: linkul de activare valabil 24 de ore, parola de minim 10 caractere care expira dupa 180 de zile, blocare dupa 5 incercari gresite pentru 30 de minute, prelungire online o data cu 14 zile, butonul aparand cu cel mult 3 zile inainte de termen si deloc daca ai penalitati de peste 20 de lei, cel mult 3 rezervari, plata online de minim 5 lei, 2 carti electronice a cate 7 zile, suport luni–vineri 9:00–16:00 etc.
+* **Coerenta cu regulamentul:** am verificat ca valorile comune sunt aceleasi: prelungire o singura data cu 14 zile si nu daca e rezervata (§4), cel mult 3 rezervari, pastrate 3 zile lucratoare (§5), 2 carti electronice a cate 7 zile (§10), istoricul pastrat cat e valabil permisul plus un an (§11). Documentul spune ca, la neconcordanta, prevaleaza regulamentul.
+* **Indexarea:** `BuildAsync` primeste folderul `Docs` si indexeaza toate fisierele `*.md`. Sursa e numele fisierului fara extensie, iar cheile sunt `cont-online-01 ... cont-online-11` si `regulament-01 ... regulament-13`. La pornire: `RAG: fragmente pe document (sectiuni) cont-online: 11, regulament: 13 + 41 carti indexate.`
+* **Tool-ul MCP:** descrierea lui `search_documents` spune acum ce contine fiecare document, iar parametrul `source` accepta `'regulament'`, `'cont-online'`, `'carte'` sau gol.
+* **Pagina Intreaba:** are o lista cu documentul (sursa) in care se cauta, titlul „Intreaba biblioteca”, iar mesajul de sistem vorbeste de documentul ales, nu doar de regulament. Cand nu e niciun fragment peste prag, raspunsul e „Documentul ales nu precizeaza.”.
+
+**Teste:**
+
+| Intrebarea | Pagina Intreaba (sursa cont-online) | Agentul (optiunea 2) |
+|-|-|-|
+| Dupa cate incercari gresite se blocheaza contul si pentru cat timp? | „Dupa 5 incercari gresite, contul se blocheaza automat pentru 30 de minute.” Sursa [1] §3, scor 0,648. **Corect.** | `search_documents(query=blocare cont, source=regulament)` → „mai mult de 3 incercari ... cateva zile”. **Gresit:** a cautat in regulament, nu in cont-online, si a inventat. |
+| Pot prelungi online un imprumut daca am penalitati? | „Documentul nu precizeaza.” **Gresit**, desi primul fragment gasit era chiar §5 (0,711), care spune ca nu se poate cu penalitati de peste 20 de lei. Modelul nu a folosit fragmentul. | `search_documents(... source=cont-online)` (de 2 ori), apoi `search_books(prelungire)` → „doar daca penalitatea e mai mica de 20 de lei”. **Corect.** |
+
+Cautarea a gasit de fiecare data fragmentul bun cand sursa era corecta. Greselile au venit de la model: la pagina nu a citit raspunsul din §5, iar agentul a ales o data sursa gresita. Ca test de control, intrebarea despre blocarea contului pusa pe sursa `regulament` a dat corect „Documentul nu precizeaza.”.
+
+## Folosirea AI (I10)
+
+* **Instrument:** Claude (Claude Code), ca asistent la scrierea codului, la teste si la textul documentului `cont-online.md` din S2. Regulile din document le-am verificat sa fie coerente intre sectiuni si cu regulamentul (vezi S2). Rezultatele din jurnal sunt obtinute rulând aplicatia.
+* **Exemplu de cerere:** „fa asta acum” (impreuna cu PDF-ul laboratorului 10).
+* **O situatie in care raspunsul a fost gresit:** la S1, prima varianta a optiunii 4 citea `eval.json` cu `File.ReadAllText("eval.json")`, deci din folderul curent. Pornita din folderul solutiei, evaluarea nu afisa nimic. Pornita din folderul agentului mergea. Am schimbat in `Path.Combine(AppContext.BaseDirectory, "eval.json")`, ca fisierul sa fie citit de langa executabil (e copiat acolo cu „Copy if newer”).
+
+## Abateri de la cerinte (I10)
+
+* Baza de date e SQLite, ca la laboratoarele anterioare.
+* La A1, Edit-ul cartii nu modifica descrierea, pentru ca formularul Edit foloseste ViewModel-ul de la I2 (protectie la overposting). Reindexarea dupa Edit se vede deci la titlu, autor si gen.
+* La S1, titlurile din regulament au punctul escapat in Markdown (`6\.`), asa ca evaluarea scoate `\` inainte de comparatia cu `expected`.

@@ -9,14 +9,16 @@ namespace Intalnirea1.Mcp;
 public class DocumentTools
 {
     [McpServerTool(Name = "search_documents", ReadOnly = true, Destructive = false, OpenWorld = false)]
-    [Description("Caută după sens în regulamentul Bibliotecii și în descrierile cărților. " +
-                 "Folosește-l pentru întrebări despre reguli (împrumut, termene, penalități, program, sala de lectură) " +
-                 "și când cititorul descrie subiectul unei cărți, nu titlul ei. " +
+    [Description("Caută după sens în documentele Bibliotecii și în descrierile cărților. Documente: " +
+                 "'regulament' = regulamentul Bibliotecii (împrumut, termene, penalități, program, sala de lectură); " +
+                 "'cont-online' = întrebări frecvente despre contul online al cititorului (activare, parolă, cont blocat, " +
+                 "prelungire și rezervări din cont, plata penalităților online, cărți electronice, notificări, ștergerea contului). " +
+                 "Folosește-l și când cititorul descrie subiectul unei cărți, nu titlul ei. " +
                  "Întoarce fragmentele cele mai apropiate de întrebare, cu sursa, titlul și scorul de similaritate (0–1).")]
     public static Task<List<DocumentHit>> SearchDocuments(
         DocumentIndex index,                                   
         [Description("Intrebarea sau descrierea, in cuvintele cititorului.")] string query,
-        [Description("Unde caută: 'regulament', 'carte' sau gol pentru ambele.")] string? source = null,
+        [Description("Unde caută: 'regulament', 'cont-online', 'carte' sau gol pentru toate.")] string? source = null,
         [Description("Cate fragmente (1–8). Implicit 3.")] int top = 3,
         CancellationToken ct = default)
     {

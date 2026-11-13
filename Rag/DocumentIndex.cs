@@ -25,22 +25,34 @@ public class DocumentIndex
 
     public int Count { get; private set; }
 
-    public async Task BuildAsync(LibraryContext db, string regulamentPath, CancellationToken ct = default)
+    // Î10-S2: sursele (documentele) indexate, de ex. "regulament", "cont-online"
+    public List<string> Documents { get; } = [];
+
+    public async Task BuildAsync(LibraryContext db, string docsFolder, CancellationToken ct = default)
     {
         await _collection.EnsureCollectionExistsAsync(ct);
 
-        // 1. regulamentul impartit in fragmente
-        var parts = Chunker.Split(await File.ReadAllTextAsync(regulamentPath, ct), ChunkMode);
-        for (int i = 0; i < parts.Count; i++)
+        // 1. fiecare document Docs/*.md, impartit in fragmente; sursa = numele fisierului fara extensie
+        var perDocument = new List<string>();
+        int docParts = 0;
+        foreach (var path in Directory.GetFiles(docsFolder, "*.md").OrderBy(p => p))
         {
-            await _collection.UpsertAsync(new DocumentChunk
+            var source = Path.GetFileNameWithoutExtension(path);
+            var parts = Chunker.Split(await File.ReadAllTextAsync(path, ct), ChunkMode);
+            for (int i = 0; i < parts.Count; i++)
             {
-                Id = $"regulament-{i + 1:00}",
-                Source = "regulament",
-                Title = parts[i].Title,
-                Text = parts[i].Text,
-                Embedding = parts[i].Text         
-            }, ct);
+                await _collection.UpsertAsync(new DocumentChunk
+                {
+                    Id = $"{source}-{i + 1:00}",          // chei unice: regulament-01, cont-online-01 ...
+                    Source = source,
+                    Title = parts[i].Title,
+                    Text = parts[i].Text,
+                    Embedding = parts[i].Text
+                }, ct);
+            }
+            Documents.Add(source);
+            perDocument.Add($"{source}: {parts.Count}");
+            docParts += parts.Count;
         }
 
         // 2. descrierile cartilor din baza de date (cate un fragment pe carte)
@@ -67,9 +79,9 @@ public class DocumentIndex
             }, ct);
         }
 
-        Count = parts.Count + books.Count;
-        _log.LogInformation("RAG: {Parts} fragmente din regulament ({Mode}) + {Books} carti indexate.",
-            parts.Count, ChunkMode, books.Count);
+        Count = docParts + books.Count;
+        _log.LogInformation("RAG: fragmente pe document ({Mode}) {PerDocument} + {Books} carti indexate.",
+            ChunkMode, string.Join(", ", perDocument), books.Count);
     }
 
     // Î10-A1: indexează (sau reindexează) o singură carte, după ID.

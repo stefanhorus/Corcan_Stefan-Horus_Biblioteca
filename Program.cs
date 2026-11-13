@@ -110,7 +110,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<LibraryContext>();
     var index = app.Services.GetRequiredService<DocumentIndex>();
-    await index.BuildAsync(db, Path.Combine(app.Environment.ContentRootPath, "Docs", "regulament.md"));
+    await index.BuildAsync(db, Path.Combine(app.Environment.ContentRootPath, "Docs"));
 }
 
 app.Run();
