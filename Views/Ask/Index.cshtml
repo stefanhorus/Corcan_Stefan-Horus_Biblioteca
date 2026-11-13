@@ -1,0 +1,43 @@
+@model AskViewModel
+@{ ViewData["Title"] = "Întreabă regulamentul"; }
+
+<h1>Întreabă regulamentul</h1>
+
+<form asp-action="Index" method="post" class="mb-3">
+    <label asp-for="Question" class="form-label"></label>
+    <div class="input-group">
+        <input asp-for="Question" class="form-control" placeholder="de ex. Câte cărți pot împrumuta?" />
+        <button type="submit" class="btn btn-primary">Întreabă</button>
+    </div>
+</form>
+
+@if (Model.Answer is not null)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Răspuns</h5>
+            <p class="card-text" style="white-space: pre-line">@Model.Answer</p>
+            <small class="text-muted">Timp: @Model.Milliseconds ms</small>
+        </div>
+    </div>
+}
+
+@if (Model.Sources.Count > 0)
+{
+    <h5>Surse</h5>
+    <table class="table table-sm">
+        <thead><tr><th>#</th><th>Secțiunea</th><th>Scor</th><th>Text</th></tr></thead>
+        <tbody>
+        @for (int i = 0; i < Model.Sources.Count; i++)
+        {
+            var s = Model.Sources[i];
+            <tr>
+                <td>[@(i + 1)]</td>
+                <td>@s.Title</td>
+                <td>@s.Score.ToString("0.000")</td>
+                <td><small>@s.Text</small></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

@@ -37,6 +37,10 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
     new OllamaApiClient(new Uri("http://localhost:11434"), "embeddinggemma"));
 builder.Services.AddSingleton<DocumentIndex>();
 
+// Î10-A2: clientul de chat pentru pagina „Întreabă” (RAG clasic)
+builder.Services.AddSingleton<IChatClient>(
+    new OllamaApiClient(new Uri("http://localhost:11434"), "llama3.2"));
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

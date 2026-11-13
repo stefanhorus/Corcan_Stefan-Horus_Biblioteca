@@ -320,3 +320,13 @@ Apeluri gresite, toate cu `IsError: True`:
 **(1) De ce cheia trebuie sa fie aceeasi (`carte-{ID}`)?** `UpsertAsync` cauta fragmentul dupa cheie. Daca cheia e aceeasi, fragmentul vechi e inlocuit. Daca ar fi diferita, la fiecare Edit s-ar adauga un fragment nou si cartea ar aparea de mai multe ori, si cu textul vechi. `RemoveBookAsync` sterge tot dupa aceasta cheie, deci altfel n-ar sterge fragmentul creat la pornire. La test, dupa Edit a ramas un singur rezultat pentru Harap-Alb.
 
 **(2) Baza a salvat cartea, dar Ollama e oprit.** Am testat: am oprit Ollama si am adaugat o carte. Pagina a dat **eroarea 500** (`HttpRequestException: Connection refused (localhost:11434)`), dar cartea **s-a salvat** in baza (ID 43). In index **nu a intrat**: nici dupa ce am pornit Ollama din nou, cautarea nu o gasea. Baza si indexul au ramas nesincronizate pana la repornirea aplicatiei (cand `BuildAsync` reface tot indexul) sau pana la urmatorul Edit al cartii. Utilizatorul vede o eroare, desi cartea a fost adaugata. Am sters apoi cartea de test.
+
+## A2 · Pagina „Intreaba regulamentul” (RAG clasic)
+
+* Pagina `/Ask` (link „Intreaba” in meniu) cauta mereu primele 3 fragmente din regulament, le pune numerotate in prompt si face un singur apel la `llama3.2`. Afiseaza raspunsul, timpul si un tabel cu sursele ([1]–[3], sectiunea, scorul si textul).
+* Test „Cate carti poate imprumuta un student la master?”: „cel mult 5 carti” (corect, §3, scor 0,772), in 2123 ms. Nu a pus citarea [1] in text, desi i-am cerut.
+* **„Cat costa Baltagul?”:**
+  * **pagina:** „Regulamentul nu precizeaza costul ...” (3468 ms). Sursele au fost §7 Carti pierdute 0,364, §2 Permisul 0,357, §6 Intarzieri 0,318. Nu a inventat un pret, dar nici nu putea raspunde, pentru ca pagina cauta doar in regulament.
+  * **agentul (optiunea 2):** `[tool] search_books(query=Baltag)` → „Pretul cartii Baltagul de Mihail Sadoveanu este de 32 lei.” Corect.
+
+**Cand e mai potrivita pagina si cand agentul?** Pagina (RAG clasic) e potrivita pentru intrebari despre reguli, la care raspunsul e sigur in regulament: cauta mereu acolo, face un singur apel la model, e rapida si arata sursele, deci se poate verifica. Agentul (RAG agentic) e potrivit pentru intrebari despre date din aplicatie (preturi, carti, recomandari) sau care cer mai multe surse, pentru ca alege singur tool-ul. La „Cat costa Baltagul?” pagina nu avea de unde sa stie, iar agentul a ales `search_books` si a gasit pretul. In schimb, agentul e mai lent si uneori alege tool-ul gresit (am vazut asta la I8 si I9).
