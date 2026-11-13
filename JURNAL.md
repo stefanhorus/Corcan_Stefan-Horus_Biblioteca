@@ -352,3 +352,66 @@ Dupa prag:
 | control: 10 zile intarziere | a pastrat toate 3 fragmentele (≥ 0,44), raspuns corect din [3]: 1 leu/zi, deci 10 lei | 3162 ms |
 
 Fara apel la model, raspunsul vine de aproape 50–100 de ori mai repede si nu mai exista riscul ca modelul sa inventeze ceva din fragmente fara legatura.
+
+## S1 · Masuram calitatea cautarii (varianta B1: modelul de embeddings)
+
+* `Biblioteca.Agent/eval.json` are **17 intrebari**: cele 5 din fisa si 12 scrise de mine, ca parafraze (de ex. „legitimatia” in loc de „permisul”, „e-book-uri” in loc de „carti electronice”, „chatbot-ul” in loc de „asistentul virtual”). Dintre ale mele, 3 sunt **in engleza**.
+* Optiunea 4 („Evaluare”) din `Biblioteca.Agent` apeleaza `search_documents` (top = 5, sursa din fisier) pentru fiecare intrebare si afiseaza locul primului rezultat al carui titlu incepe cu `expected`, scorul primului rezultat si recall@1, @3, @5.
+* Observatie: titlurile din index sunt luate din Markdown si au punctul escapat (`6\. Intarzieri ...`), asa ca la comparatie scot `\` din titlu.
+
+**Configuratia 1 · embeddinggemma**
+
+```
+Întrebare                                                      Loc      Scor#1
+Cât plătesc dacă aduc cartea cu o săptămână mai târziu?        1        0,571
+Cine poate împrumuta cărți?                                    1        0,689
+Pot cere o carte care e împrumutată de altcineva?              negăsit  0,642
+Cum propun bibliotecii să cumpere o carte?                     1        0,678
+Până la ce oră e deschis în sesiune?                           1        0,501
+Ce fac dacă îmi pierd legitimația de la bibliotecă?            1        0,614
+Câte volume poate ține acasă un profesor?                      1        0,524
+Pentru câte zile primesc o carte acasă?                        1        0,522
+Ce se întâmplă dacă stric sau scriu pe o carte?                1        0,500
+Am voie să mănânc ceva cât învăț la bibliotecă?                5        0,518
+Câte e-book-uri pot avea deodată?                              2        0,622
+Cât timp îmi păstrează biblioteca istoricul?                   1        0,602
+Mă pot baza pe ce îmi spune chatbot-ul bibliotecii?            1        0,556
+Cât timp mi se ține la ghișeu o carte pe care am cerut-o?      2        0,627
+How much is the fine for returning a book late?                1        0,538
+What are the opening hours on Saturday?                        1        0,405
+Can people from outside the faculty borrow books?              1        0,567
+17 întrebări · recall@1 = 76,5% · recall@3 = 88,2% · recall@5 = 94,1%
+```
+
+**Configuratia 2 · nomic-embed-text** (la pornire: `RAG: 13 fragmente din regulament (sectiuni) + 41 carti indexate.`)
+
+```
+Întrebare                                                      Loc      Scor#1
+Cât plătesc dacă aduc cartea cu o săptămână mai târziu?        3        0,743
+Cine poate împrumuta cărți?                                    1        0,779
+Pot cere o carte care e împrumutată de altcineva?              negăsit  0,739
+Cum propun bibliotecii să cumpere o carte?                     1        0,775
+Până la ce oră e deschis în sesiune?                           5        0,630
+Ce fac dacă îmi pierd legitimația de la bibliotecă?            4        0,729
+Câte volume poate ține acasă un profesor?                      4        0,666
+Pentru câte zile primesc o carte acasă?                        negăsit  0,730
+Ce se întâmplă dacă stric sau scriu pe o carte?                4        0,719
+Am voie să mănânc ceva cât învăț la bibliotecă?                4        0,726
+Câte e-book-uri pot avea deodată?                              1        0,656
+Cât timp îmi păstrează biblioteca istoricul?                   1        0,746
+Mă pot baza pe ce îmi spune chatbot-ul bibliotecii?            2        0,689
+Cât timp mi se ține la ghișeu o carte pe care am cerut-o?      negăsit  0,693
+How much is the fine for returning a book late?                1        0,480
+What are the opening hours on Saturday?                        1        0,459
+Can people from outside the faculty borrow books?              1        0,444
+17 întrebări · recall@1 = 41,2% · recall@3 = 52,9% · recall@5 = 82,4%
+```
+
+**Intrebari care si-au schimbat rezultatul:**
+* „Pentru cate zile primesc o carte acasa?”: gemma o gaseste pe **locul 1** (§4 Durata imprumutului), nomic **negasit**. Intrebarea foloseste „cate zile” si „acasa”, nu „durata” sau „imprumut”, iar nomic se ia mai mult dupa cuvinte decat dupa sens.
+* „Cat timp mi se tine la ghiseu o carte pe care am cerut-o?”: gemma **locul 2** (§5 Rezervari), nomic **negasit**. Raspunsul e in §5 („pastrata la ghiseu timp de 3 zile”), dar intrebarea nu spune „rezervare”.
+* „Cate e-book-uri pot avea deodata?”: invers, gemma **locul 2**, nomic **locul 1** (§10). Aici nomic a legat mai bine „e-book” de „carti electronice”.
+* „Pot cere o carte care e imprumutata de altcineva?”: **negasit la ambele**. Primele rezultate la gemma sunt §1 Cine poate imprumuta 0,642, §4 Durata 0,590 si §10 Acces online. Intrebarea are mult „imprumut”, iar §5 nu foloseste deloc cuvantul, vorbeste doar de „rezervari”.
+* Cele 3 intrebari in engleza au fost gasite pe locul 1 de ambele modele.
+
+**Concluzia:** pastrez **embeddinggemma**. E mult mai bun pe intrebarile in romana (recall@1 76,5% fata de 41,2%) si gaseste tot pe engleza. Scorurile lui nomic sunt mai mari in general (0,6–0,78), dar asta nu inseamna ca alege mai bine: la nomic toate fragmentele au scoruri apropiate, deci un prag de scor ca la A3 ar trebui ales altfel pentru fiecare model. Dupa experiment am revenit la `embeddinggemma`.

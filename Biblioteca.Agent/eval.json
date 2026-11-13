@@ -1,0 +1,21 @@
+[
+  { "question": "Cât plătesc dacă aduc cartea cu o săptămână mai târziu?", "source": "regulament", "expected": "6. Întârzieri și penalități" },
+  { "question": "Cine poate împrumuta cărți?", "source": "regulament", "expected": "1. Cine poate împrumuta" },
+  { "question": "Pot cere o carte care e împrumutată de altcineva?", "source": "regulament", "expected": "5. Rezervări" },
+  { "question": "Cum propun bibliotecii să cumpere o carte?", "source": "regulament", "expected": "12. Sugestii de achiziție" },
+  { "question": "Până la ce oră e deschis în sesiune?", "source": "regulament", "expected": "9. Programul bibliotecii" },
+
+  { "question": "Ce fac dacă îmi pierd legitimația de la bibliotecă?", "source": "regulament", "expected": "2. Permisul de bibliotecă" },
+  { "question": "Câte volume poate ține acasă un profesor?", "source": "regulament", "expected": "3. Numărul de cărți împrumutate" },
+  { "question": "Pentru câte zile primesc o carte acasă?", "source": "regulament", "expected": "4. Durata împrumutului și prelungirea" },
+  { "question": "Ce se întâmplă dacă stric sau scriu pe o carte?", "source": "regulament", "expected": "7. Cărți pierdute sau deteriorate" },
+  { "question": "Am voie să mănânc ceva cât învăț la bibliotecă?", "source": "regulament", "expected": "8. Sala de lectură" },
+  { "question": "Câte e-book-uri pot avea deodată?", "source": "regulament", "expected": "10. Acces online și cărți electronice" },
+  { "question": "Cât timp îmi păstrează biblioteca istoricul?", "source": "regulament", "expected": "11. Date personale" },
+  { "question": "Mă pot baza pe ce îmi spune chatbot-ul bibliotecii?", "source": "regulament", "expected": "13. Asistentul virtual" },
+  { "question": "Cât timp mi se ține la ghișeu o carte pe care am cerut-o?", "source": "regulament", "expected": "5. Rezervări" },
+
+  { "question": "How much is the fine for returning a book late?", "source": "regulament", "expected": "6. Întârzieri și penalități" },
+  { "question": "What are the opening hours on Saturday?", "source": "regulament", "expected": "9. Programul bibliotecii" },
+  { "question": "Can people from outside the faculty borrow books?", "source": "regulament", "expected": "1. Cine poate împrumuta" }
+]

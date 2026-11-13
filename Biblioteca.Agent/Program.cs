@@ -21,11 +21,12 @@ var transport = new HttpClientTransport(new HttpClientTransportOptions
 await using McpClient mcp = await McpClient.CreateAsync(transport);
 IList<McpClientTool> tools = await mcp.ListToolsAsync();
 
-Console.Write("1 Inspector; 2 Agent; 3 Cautare in documente > ");
+Console.Write("1 Inspector; 2 Agent; 3 Cautare in documente; 4 Evaluare > ");
 switch (Console.ReadLine())
 {
     case "1": await Inspector(); break;
     case "3": await CautareDocumente(); break;
+    case "4": await Evaluare(); break;
     default: await Agent(); break;
 }
 
@@ -62,6 +63,42 @@ async Task CautareDocumente()
             }
         }
     }
+}
+
+// Î10-S1: recall@k pe setul din eval.json, prin același apel MCP ca la opțiunea 3
+async Task Evaluare()
+{
+    const int K = 5;
+    var items = JsonSerializer.Deserialize<List<EvalItem>>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "eval.json")),
+        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+    int[] hits = new int[K + 1];            // hits[k] = câte întrebări au fragmentul așteptat între primele k
+    Console.WriteLine($"\n{"Întrebare",-62} {"Loc",-8} Scor#1");
+    foreach (var item in items)
+    {
+        CallToolResult result = await mcp.CallToolAsync("search_documents",
+            new Dictionary<string, object?> { ["query"] = item.Question, ["source"] = item.Source, ["top"] = K });
+
+        var found = new List<(string Title, double Score)>();
+        foreach (var block in result.Content.OfType<TextContentBlock>())
+        {
+            using var doc = JsonDocument.Parse(block.Text);
+            foreach (var hit in doc.RootElement.EnumerateArray())
+                found.Add((Camp(hit, "title").GetString() ?? "", Camp(hit, "score").GetDouble()));
+        }
+
+        // titlurile din Markdown au "6\. ..." (punctul escapat), așa că scoatem "\" înainte de comparație
+        int rank = found.FindIndex(f => f.Title.Replace("\\", "").StartsWith(item.Expected,
+            StringComparison.OrdinalIgnoreCase)) + 1;
+        for (int k = 1; k <= K; k++) if (rank >= 1 && rank <= k) hits[k]++;
+
+        var q = item.Question.Length > 60 ? item.Question[..57] + "..." : item.Question;
+        var first = found.Count > 0 ? found[0].Score.ToString("F3") : "-";
+        Console.WriteLine($"{q,-62} {(rank > 0 ? rank.ToString() : "negăsit"),-8} {first}");
+    }
+
+    Console.WriteLine($"\n{items.Count} întrebări · recall@1 = {100.0 * hits[1] / items.Count:F1}% · " +
+                      $"recall@3 = {100.0 * hits[3] / items.Count:F1}% · recall@5 = {100.0 * hits[5] / items.Count:F1}%");
 }
 
 // campul unui obiect JSON, indiferent de litere mari/mici (Score sau score)
@@ -152,3 +189,6 @@ async Task Agent()
         Console.WriteLine($"Asistent: {response.Text}");
     }
 }
+
+// o întrebare din eval.json
+record EvalItem(string Question, string Source, string Expected);
