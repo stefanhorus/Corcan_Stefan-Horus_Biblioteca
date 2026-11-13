@@ -330,3 +330,25 @@ Apeluri gresite, toate cu `IsError: True`:
   * **agentul (optiunea 2):** `[tool] search_books(query=Baltag)` → „Pretul cartii Baltagul de Mihail Sadoveanu este de 32 lei.” Corect.
 
 **Cand e mai potrivita pagina si cand agentul?** Pagina (RAG clasic) e potrivita pentru intrebari despre reguli, la care raspunsul e sigur in regulament: cauta mereu acolo, face un singur apel la model, e rapida si arata sursele, deci se poate verifica. Agentul (RAG agentic) e potrivit pentru intrebari despre date din aplicatie (preturi, carti, recomandari) sau care cer mai multe surse, pentru ca alege singur tool-ul. La „Cat costa Baltagul?” pagina nu avea de unde sa stie, iar agentul a ales `search_books` si a gasit pretul. In schimb, agentul e mai lent si uneori alege tool-ul gresit (am vazut asta la I8 si I9).
+
+## A3 · Prag de scor si raspuns fara model
+
+Scorul primului fragment, inainte de prag:
+
+| Intrebarea | Primul fragment | Scor |
+|-|-|-|
+| (1) Pot lucra cu laptopul in sala de lectura? | §8 Sala de lectura | **0,601** |
+| (2) Cum se instaleaza Visual Studio? | §13 Asistentul virtual | **0,341** |
+
+* Am ales **`MinScore = 0.40`**, intre cele doua. Nu am mers mai sus (de ex. 0,45) pentru ca la I8 am vazut ca la „Cat platesc daca intarzii 10 zile?” fragmentul corect, §6, are doar **0,442**. Cu 0,45 ar fi fost aruncat, desi contine raspunsul.
+* Dupa Retrieval pastrez doar fragmentele cu `Score >= MinScore`. Daca nu ramane niciunul, raspund „Regulamentul nu precizeaza. Intrebati personalul bibliotecii.” fara apel la model.
+
+Dupa prag:
+
+| Intrebarea | Ce s-a intamplat | Timp |
+|-|-|-|
+| (1) laptop | raspuns din §8, citeaza [1]: da, se pot folosi laptopuri | 2148 ms (cu model) |
+| (2) Visual Studio | „Regulamentul nu precizeaza. Intrebati personalul bibliotecii.”, fara surse | **27 ms** (fara model) |
+| control: 10 zile intarziere | a pastrat toate 3 fragmentele (≥ 0,44), raspuns corect din [3]: 1 leu/zi, deci 10 lei | 3162 ms |
+
+Fara apel la model, raspunsul vine de aproape 50–100 de ori mai repede si nu mai exista riscul ca modelul sa inventeze ceva din fragmente fara legatura.

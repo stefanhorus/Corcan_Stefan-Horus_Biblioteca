@@ -10,6 +10,10 @@ namespace Intalnirea1.Controllers;
 // și face un singur apel la model.
 public class AskController(DocumentIndex index, IChatClient chat) : Controller
 {
+    // Î10-A3: sub acest scor un fragment nu e considerat relevant. Ales între 0,341
+    // („Cum se instalează Visual Studio?”) și 0,601 („Pot lucra cu laptopul în sala de lectură?”).
+    private const double MinScore = 0.40;
+
     [HttpGet]
     public IActionResult Index() => View(new AskViewModel());
 
@@ -20,7 +24,17 @@ public class AskController(DocumentIndex index, IChatClient chat) : Controller
         var sw = Stopwatch.StartNew();
 
         // 1 · Retrieval: cele mai apropiate 3 fragmente din regulament
-        vm.Sources = await index.SearchAsync(vm.Question, 3, "regulament", ct);
+        vm.Sources = (await index.SearchAsync(vm.Question, 3, "regulament", ct))
+            .Where(s => s.Score >= MinScore)
+            .ToList();
+
+        // nimic relevant: răspundem fără să mai apelăm modelul
+        if (vm.Sources.Count == 0)
+        {
+            vm.Answer = "Regulamentul nu precizează. Întrebați personalul bibliotecii.";
+            vm.Milliseconds = sw.ElapsedMilliseconds;
+            return View(vm);
+        }
 
         // 2 · Augmentation: fragmentele intră în prompt, numerotate
         var fragmente = string.Join("\n\n",
